@@ -1,4 +1,4 @@
-# Arweave Name Specifications (ArNS)
+# Arweave Name System Specifications (ArNSS)
 
 ## Abstract
 
@@ -111,3 +111,4 @@ The following implementations act as blueprints for deploying Arweave Name Proce
 
 - The AO Token and Subledger Specification, which Arweave Name Tokens inherit https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#ao-Token-and-Subledger-Specification
 - AO Token implementation in lua https://github.com/permaweb/aos/blob/main/blueprints/token.lua
+- AR.IO White Paper https://whitepaper_ar-io.arweave.net/
