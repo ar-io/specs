@@ -4,7 +4,15 @@
 
 The Arweave Name Token is created when layering the utilities needed to support token transferability, balances, and other helpful metadata on top of the **ARNS-CORE-01** and **ARNS-MANAGE-01** Specifications.
 
-The **ARNS-TOKEN-01** Specification merges the specifications set in the AO Token Blueprint and is designed to act as a true non-fungible token. This means that there is a total, indivisible token supply of 1 for each ANT, and transferring it changes both the balance and ownership.
+The **ARNS-TOKEN-01** Specification merges the protocols set in the AO Token and Subledger Specification except it is designed to act as a single, non-fungible token. This means that there is a total, indivisible token supply of 1 for each ANT, and transferring it changes both the balance and ownership.
+
+For more information on the AO Token and Subledger Specification see https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#ao-Token-and-Subledger-Specification
+
+## Language of Implementation
+
+All examples and code snippets in this specification are written in Lua. This choice ensures compatibility with the AO Processes and the Arweave ecosystem.
+
+However, developers are not restricted to using Lua exclusively when building new features or extending functionalities around ArNS. While Lua is recommended for direct integration with existing infrastructure, other programming languages can be used, provided they adhere to the protocols and specifications outlined in this document.
 
 ## Specification Requirements
 
@@ -37,9 +45,7 @@ The **ARNS-TOKEN-01** Specification does not include the ability to `Mint` or `B
 
 ## Objects
 
-The **ARNS-TOKEN-01** specification includes all of the objects in **ARNS-MANAGE-01**, **ARNS-CORE-01**, and an adapted AO Token blueprint.
-
-More information on the AO Token and Subledger specification: https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#ao-Token-and-Subledger-Specification
+The **ARNS-TOKEN-01** specification leverages the general AO Token and Subledger specification, and includes all of the objects in **ARNS-MANAGE-01** and **ARNS-CORE-01**
 
 ### ARNS-TOKEN-01 Objects
 
@@ -62,7 +68,6 @@ Records = Records or {
     ttlSeconds = 3600
   }
 }
-
 ```
 
 ## Handlers and Responses

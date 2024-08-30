@@ -90,3 +90,24 @@ The Arweave Name System Specifications span across several specs that can be com
 - **ARNS-ROUTING-01**: Describes the `ar://` schema and routing protocols for accessing permanent data and domain names via AR.IO Gateways.
 
 Applications like `https://arns.ar.io` can leverage this framework via SDKs like the AR.IO SDK or extend them further to create a rich ecosystem of multi-functional AO processes and tooling that support the needs of ArNS name buying, management, and resolution.
+
+### Language of Implementation
+
+Many examples and references provided in the specification documents are written in Lua. This choice ensures compatibility with many AO Specs and Processes while making it easier for developers working within the AO and AR.IO ecosystems to implement and extend the functionalities defined by the ArNS specifications. The use of Lua also aligns with the existing infrastructure and toolsets used in the AOS environment.
+
+However, developers are not restricted to using Lua exclusively when building new features or extending functionalities around ArNS. While Lua is recommended for direct integration with existing AO infrastructure, other programming languages can be used, provided they adhere to the protocols and specifications outlined in these documents.
+
+## Implementations
+
+The following implementations act as blueprints for deploying Arweave Name Processes and Tokens in AOS or other platforms. Developers can utilize these files to layer on the specification they need onto their new or existing process.
+
+- ARNS-RESOLVER-01 https://github.com/ar-io/arns-resolver (Typescript, Node.js, Docker)
+- ARNS-CORE-01 https://github.com/ar-io/ao-pilot/blob/develop/scripts/anp-resolve-01.lua (Lua)
+- ARNS-MANAGE-01 https://github.com/ar-io/ao-pilot/blob/develop/scripts/anp-control-01.lua (Lua)
+- ARNS-TOKEN-01 https://github.com/ar-io/ar-io-ant-process (Lua)
+- AR.IO SDK https://github.com/ar-io/ar-io-sdk (Typescript)
+
+## Other References
+
+- The AO Token and Subledger Specification, which Arweave Name Tokens inherit https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#ao-Token-and-Subledger-Specification
+- AO Token implementation in lua https://github.com/permaweb/aos/blob/main/blueprints/token.lua

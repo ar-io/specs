@@ -4,6 +4,12 @@
 
 The core Arweave Name specification for an AO process contains the specific details required by AR.IO Gateways to resolve the corresponding ArNS names and their Arweave Transaction IDs. This is the most basic building block and is primarily meant to be layered on top of or below other functionality.
 
+## Language of Implementation
+
+All examples and code snippets in this specification are written in Lua. This choice ensures compatibility with the AO Processes and the Arweave ecosystem.
+
+However, developers are not restricted to using Lua exclusively when building new features or extending functionalities around ArNS. While Lua is recommended for direct integration with existing infrastructure, other programming languages can be used, provided they adhere to the protocols and specifications outlined in this document.
+
 ## Specification Requirements
 
 The **ARNS-CORE-01** Specification includes the following requirements for valid, resolvable Records:

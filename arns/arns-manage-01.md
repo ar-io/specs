@@ -4,6 +4,14 @@
 
 The first layer added onto the ARNS-CORE-01 Specification includes the utilities needed to manage and control the ANT. This includes adding new records, modifying existing records, removing records, and configuring who else can control the ANT.
 
+## Language of Implementation
+
+All examples and code snippets in this specification are written in Lua. This choice ensures compatibility with the AO Processes and the Arweave ecosystem.
+
+However, developers are not restricted to using Lua exclusively when building new features or extending functionalities around ArNS. While Lua is recommended for direct integration with existing infrastructure, other programming languages can be used, provided they adhere to the protocols and specifications outlined in this document.
+
+## Specification Requirements
+
 The **ARNS-MANAGE-01** Specification includes the following requirements:
 
 - Must include a list of `Controllers` who act as secondary users who control the `Records` set in this ANT.
