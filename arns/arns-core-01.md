@@ -10,21 +10,21 @@ The **ARNS-CORE-01** Specification includes the following requirements for valid
 
 **Records Table**:
 
-- Must have a Records table containing subDomains and their associated transactionId and ttlSeconds.
-- The Records object should be sorted alphabetically.
+- Must have a `Records` table containing `subDomains` and their associated `transactionId` and `ttlSeconds`.
+- The `Records` object should be sorted alphabetically.
 - Each Record subdomain must be a string.
-- Each Record must include a transactionId, which is where this subdomain will point to.
-- Each Record must include a ttlSeconds value, which is the suggested time for caching by ArNS Name Resolvers.
-- The ttlSeconds value must not be less than 900 seconds.
-- Records should have a default Record, `@`, which points to an Arweave Transaction ID.
+- Each Record must include a `transactionId`, which is where this subdomain will point to.
+- Each Record must include a `ttlSeconds` value, which is the suggested time for caching by ArNS Name Resolvers.
+- The `ttlSeconds` value must not be less than 900 seconds.
+- `Records` must have a default Record, `@`, which points to an Arweave Transaction ID.
 - `UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk` can be used as a placeholder Transaction ID.
 - The Record subdomain plus its ArNS name must not be longer than 63 characters.
 - The Record subdomain must pass the following regular expression: `RegExp("^[a-zA-Z0-9_-]+$")`.
 
 **Handlers**:
 
-- Must include handlers to read a single Record and multiple Records.
-- Must include a handler to read the State of the ANP, which includes all Records and the current Owner.
+- Must include handlers to read a single `Record` and multiple `Records`.
+- Must include a handler to read the `State` of the ANP, which includes all `Records` and the current `Owner`.
 
 ## Resolvability
 
@@ -69,7 +69,7 @@ ARNSCoreSpecActionMap = {
 
 ### Record
 
-Retrieves the ID and time to live (seconds) for an undername contained in the Records table. Executable by anonymous users.
+Retrieves the ID and time to live (seconds) for an undername contained in the `Records` table. Executable by anonymous users.
 
 #### Parameters
 
@@ -79,9 +79,9 @@ Retrieves the ID and time to live (seconds) for an undername contained in the Re
 
 #### Rules
 
-- Must specify a valid Sub-Domain parameter (string) as a message tag.
-- The name must exist in the Records table.
-- Must add X-forwarded tags to the response notice.
+- Must specify a valid `Sub-Domain` parameter (string) as a message tag.
+- The name must exist in the `Records` table.
+- Must add `X-`forwarded tags to the response notice.
 
 #### Action
 
@@ -121,7 +121,7 @@ Send({
 
 ### State
 
-Returns specific information about the state of the **ARNS-CORE-01** process, including all Records and its current Owner. Executable by anonymous users.
+Returns specific information about the state of the **ARNS-CORE-01** process, including all `Records` and its current `Owner`. Executable by anonymous users.
 
 #### Parameters
 
@@ -131,10 +131,9 @@ No parameters necessary.
 
 - Must return a state object as JSON in the data field of the response notice.
 - The state object must include:
-  - The entire Records table as JSON.
-  - The entire Controller table as JSON.
-  - The current process Owner.
-- Must add X-forwarded tags to the response notice.
+  - The entire `Records` table as JSON.
+  - The current process `Owner`.
+- Must add `X-`forwarded tags to the response notice.
 
 #### Action
 
@@ -147,7 +146,7 @@ Send({
 
 #### Responses
 
-**Valid State**
+**Valid `State`**
 
 ```
 {
@@ -155,7 +154,6 @@ Send({
     Action = "State-Notice",
     Data = json.encode({
         Records = Records,
-        Controllers = Controllers,
         Owner = ao.env.Process.Owner,
     }),
     ... other forwarded tag name and value pairs
