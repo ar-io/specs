@@ -45,27 +45,25 @@ The **ARNS-CORE-01** specification includes all the objects needed to support Ar
 
 ### ARNS-CORE-01 Objects
 
-```
-Records = Records or {
+````Records = Records or {
     ["@"] = {
         transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
         ttlSeconds = 3600
     }
-}
-```
+}```
 
 ## Handler Action Map, Parameters, and Responses
 
 The following actions are handled in the **ARNS-CORE-01** specification:
 
-```
-ARNSCoreSpecActionMap = {
+
+```ARNSCoreSpecActionMap = {
     -- read actions
     Record = "Record",
     Records = "Records",
     State = "State",
-}
-```
+}```
+
 
 ### Record
 
@@ -85,39 +83,35 @@ Retrieves the ID and time to live (seconds) for an undername contained in the Re
 
 #### Action
 
-```
-Send({
+
+```Send({
     Target = "{Process Identifier}",
     Action = "Record",
     ["Sub-Domain"] = "foo"
-})
-```
+})```
+
 
 #### Responses
 
 **Invalid Record**
 
-```
-{
+```{
     Target = msg.From,
     Action = "Invalid-Record-Notice",
     Data = nameRes,
     Error = "Record-Error",
     ["Message-Id"] = msg.Id,
-}
-```
+}```
 
 **Valid Record**
 
-```
-{
+```{
     Target = msg.From,
     Action = "Record-Notice",
     Name = msg.Tags["Sub-Domain"],
     Data = json.encode(Records[name]),
     ... other forwarded tag name and value pairs
-}
-```
+}```
 
 ### State
 
@@ -138,19 +132,16 @@ No parameters necessary.
 
 #### Action
 
-```
-Send({
+```Send({
     Target = "{Process Identifier}",
     Action = "State"
-})
-```
+})```
 
 #### Responses
 
 **Valid State**
 
-```
-{
+```{
     Target = msg.From,
     Action = "State-Notice",
     Data = json.encode({
@@ -159,5 +150,5 @@ Send({
         Owner = ao.env.Process.Owner,
     }),
     ... other forwarded tag name and value pairs
-}
-```
+}```
+````
