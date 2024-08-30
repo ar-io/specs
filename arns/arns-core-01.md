@@ -2,7 +2,7 @@
 
 ## Overview
 
-The base Arweave Name Process Specification contains the specific details required by AR.IO Gateways to resolve the corresponding ArNS names and their Arweave Transaction IDs. This is the most basic building block and is primarily meant to be layered on top of or below other functionality.
+The core Arweave Name specification for an AO process contains the specific details required by AR.IO Gateways to resolve the corresponding ArNS names and their Arweave Transaction IDs. This is the most basic building block and is primarily meant to be layered on top of or below other functionality.
 
 ## Specification Requirements
 
@@ -21,10 +21,10 @@ The **ARNS-CORE-01** Specification includes the following requirements for valid
 - The Record subdomain plus its ArNS name must not be longer than 63 characters.
 - The Record subdomain must pass the following regular expression: `RegExp("^[a-zA-Z0-9_-]+$")`.
 
-**Methods**:
+**Handlers**:
 
-- Must include methods to read a single Record and multiple Records.
-- Must include a method to read the State of the ANP, which includes all Records and the current Owner.
+- Must include handlers to read a single Record and multiple Records.
+- Must include a handler to read the State of the ANP, which includes all Records and the current Owner.
 
 ## Resolvability
 
@@ -45,27 +45,27 @@ The **ARNS-CORE-01** specification includes all the objects needed to support Ar
 
 ### ARNS-CORE-01 Objects
 
-\`\`\`lua
+```
 Records = Records or {
-["@"] = {
-transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
-ttlSeconds = 3600
+    ["@"] = {
+        transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
+        ttlSeconds = 3600
+    }
 }
-}
-\`\`\`
+```
 
 ## Handler Action Map, Parameters, and Responses
 
 The following actions are handled in the **ARNS-CORE-01** specification:
 
-\`\`\`lua
-ANPResolveSpecActionMap = {
--- read actions
-Record = "Record",
-Records = "Records",
-State = "State",
+```
+ARNSCoreSpecActionMap = {
+    -- read actions
+    Record = "Record",
+    Records = "Records",
+    State = "State",
 }
-\`\`\`
+```
 
 ### Record
 
@@ -85,37 +85,39 @@ Retrieves the ID and time to live (seconds) for an undername contained in the Re
 
 #### Action
 
-\`\`\`lua
+```
 Send({
-Target = "{Process Identifier}",
-Action = "Record",
-["Sub-Domain"] = "foo"
+    Target = "{Process Identifier}",
+    Action = "Record",
+    ["Sub-Domain"] = "foo"
 })
-\`\`\`
+```
 
 #### Responses
 
 **Invalid Record**
-\`\`\`lua
+
+```
 {
-Target = msg.From,
-Action = "Invalid-Record-Notice",
-Data = nameRes,
-Error = "Record-Error",
-["Message-Id"] = msg.Id,
+    Target = msg.From,
+    Action = "Invalid-Record-Notice",
+    Data = nameRes,
+    Error = "Record-Error",
+    ["Message-Id"] = msg.Id,
 }
-\`\`\`
+```
 
 **Valid Record**
-\`\`\`lua
+
+```
 {
-Target = msg.From,
-Action = "Record-Notice",
-Name = msg.Tags["Sub-Domain"],
-Data = json.encode(Records[name]),
-... other forwarded tag name and value pairs
+    Target = msg.From,
+    Action = "Record-Notice",
+    Name = msg.Tags["Sub-Domain"],
+    Data = json.encode(Records[name]),
+    ... other forwarded tag name and value pairs
 }
-\`\`\`
+```
 
 ### State
 
@@ -136,25 +138,26 @@ No parameters necessary.
 
 #### Action
 
-\`\`\`lua
+```
 Send({
-Target = "{Process Identifier}",
-Action = "State"
+    Target = "{Process Identifier}",
+    Action = "State"
 })
-\`\`\`
+```
 
 #### Responses
 
 **Valid State**
-\`\`\`lua
+
+```
 {
-Target = msg.From,
-Action = "State-Notice",
-Data = json.encode({
-Records = Records,
-Controllers = Controllers,
-Owner = ao.env.Process.Owner,
-}),
-... other forwarded tag name and value pairs
+    Target = msg.From,
+    Action = "State-Notice",
+    Data = json.encode({
+        Records = Records,
+        Controllers = Controllers,
+        Owner = ao.env.Process.Owner,
+    }),
+    ... other forwarded tag name and value pairs
 }
-\`\`\`
+```

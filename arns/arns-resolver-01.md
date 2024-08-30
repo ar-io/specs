@@ -27,7 +27,7 @@ If the process does not respond to the State request, the resolver will be unabl
 
 ### 3. Local Storage of Data
 
-The resolver must store all retrieved information locally to facilitate easy lookups by users or downstream infrastructure, such as an AR.IO Gateway.
+The resolver should store all retrieved information locally to facilitate easy lookups by users or downstream infrastructure, such as an AR.IO Gateway.
 
 ## Resolution Protocols
 
