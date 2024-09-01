@@ -4,15 +4,23 @@
 
 These specifications outline the overview, structure, and operations of the Arweave Name System. They are used to create Arweave Name Tokens (ANTs), which are AO Processes utilized within the Arweave Name System (ArNS), and resolve them to Arweave identities and data. By defining both the standard and optional interfaces for these processes, this document aims to ensure consistency and interoperability for developers integrating ANTs into their own processes or applications.
 
-## Motivation
+### Motivation
+
+The building blocks in the Arweave Name Specifications ensure that ArNS can serve a broad spectrum of use cases, from simple name resolution to complex, multi-layered digital services and AO processes. This could include custom logic or interfaces suited to particular user groups or technical requirements. Developers can utilize the open protocols and APIs in these specifications to create resolvers and Arweave Name Processes tailored to specific applications or networks.
+
+For instance, a resolver could be built to integrate with decentralized applications on other blockchain platforms or to support enhanced security features like cryptographic validation of name queries.
+
+By extending the utility of ArNS across different technologies, developers can further enhance its overall interoperability and flexibility.
+
+## Arweave Name System
+
+### Motivation
 
 Arweave Transaction IDs, Wallet IDs, and AO Process IDs, characterized by their length and complexity, present usability challenges for everyday applications. They are cumbersome to remember, share, and are often erroneously flagged as spam by filters.
 
 The Arweave Name System (ArNS) addresses these issues by introducing a decentralized, censorship-resistant naming system built on the Arweave network. ArNS allows for the assignment of human-readable names to Arweave resources such as dApps, web pages, digital identities, or even AO processes.
 
 Using IO tokens for transactions and compatible with AR.IO gateway domains, ArNS simplifies access to Permaweb content, making it more navigable and user-friendly. It serves as a practical tool for enhancing user interactions on the network by replacing opaque identifiers with memorable names, thereby streamlining access and communication within the Permaweb.
-
-## Arweave Name System
 
 ### Overview
 
@@ -90,14 +98,6 @@ Applications like `https://arns.ar.io` can leverage this framework via SDKs like
 Many examples and references provided in the specification documents are written in Lua. This choice ensures compatibility with many AO Specs and Processes while making it easier for developers working within the AO and AR.IO ecosystems to implement and extend the functionalities defined by the ArNS specifications. The use of Lua also aligns with the existing infrastructure and toolsets used in the AOS environment.
 
 However, developers are not restricted to using Lua exclusively when building new features or extending functionalities around ArNS. While Lua is recommended for direct integration with existing AO infrastructure, other programming languages can be used, provided they adhere to the protocols and specifications outlined in these documents.
-
-### Customization
-
-Third-party developers can utilize the open protocols and APIs in these specifications to create resolvers and Arweave Name Processes tailored to specific applications or networks. The building blocks of the Arweave Name Specification ensure that ArNS can serve a broad spectrum of use cases, from simple name resolution to complex, multi-layered digital services and AO processes. This could include custom logic or interfaces suited to particular user groups or technical requirements.
-
-For instance, a resolver could be built to integrate with decentralized applications on other blockchain platforms or to support enhanced security features like cryptographic validation of name queries.
-
-By extending the utility of ArNS across different technologies, developers can further enhance its overall interoperability and flexibility.
 
 ### Implementations
 
