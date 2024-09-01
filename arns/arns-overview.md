@@ -81,7 +81,7 @@ The Arweave Name System Specifications span across several specs that can be com
 - **ARNS-MANAGE-1**: Details the management and control features for Arweave Names, building on the core process specification.
 - **ARNS-CORE-1**: The foundational AO process specification for ArNS Name resolution, detailing the core requirements for resolvers.
 - **ARNS-RESOLVE-1**: Outlines the protocols for resolving and serving Arweave Names across the AR.IO network.
-- **ARNS-ROUTING-01**: Describes the `ar://` schema and routing protocols for accessing permanent data and domain names via AR.IO Gateways.
+- **ARNS-ROUTING-1**: Describes the `ar://` schema and routing protocols for accessing permanent data and domain names via AR.IO Gateways.
 
 Applications like `https://arns.ar.io` can leverage this framework via SDKs like the AR.IO SDK or extend them further to create a rich ecosystem of multi-functional AO processes and tooling that support the needs of ArNS name buying, management, and resolution.
 
