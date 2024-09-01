@@ -1,18 +1,34 @@
-# ARNS-MANAGE-01
+# ARNS-MANAGE-1
 
-## Overview
+## Status:
 
-The first layer added onto the ARNS-CORE-01 Specification includes the utilities needed to manage and control the ANT. This includes adding new records, modifying existing records, removing records, and configuring who else can control the ANT.
+**Draft**
 
-## Language of Implementation
+## Version:
+
+| Version | Description                                             | Date       |
+| ------- | ------------------------------------------------------- | ---------- |
+| 1.0.0   | Initial version of the **ARNS-MANAGE-1** specification. | 2024-09-01 |
+
+## Abstract
+
+The **ARNS-MANAGE-1** specification introduces additional management and control utilities for Arweave Names. It provides the necessary handlers for adding, modifying, and removing records, as well as managing controllers who can add, set or remove these records.
+
+## Motivation
+
+The **ARNS-MANAGE-1** specification builds on the foundational ARNS-CORE-1 by adding essential management capabilities. As Arweave Names require ongoing updates and adjustments, this specification ensures that process owners have the tools needed to manage records and delegate control to other users securely. By standardizing these management operations, **ARNS-MANAGE-1** enables efficient and consistent name management across the Arweave ecosystem.
+
+#### Language of Implementation
 
 All examples and code snippets in this specification are written in Lua. This choice ensures compatibility with the AO Processes and the Arweave ecosystem.
 
 However, developers are not restricted to using Lua exclusively when building new features or extending functionalities around ArNS. While Lua is recommended for direct integration with existing infrastructure, other programming languages can be used, provided they adhere to the protocols and specifications outlined in this document.
 
-## Specification Requirements
+## Specification
 
-The **ARNS-MANAGE-01** Specification includes the following requirements:
+### Overview
+
+The **ARNS-MANAGE-1** Specification includes the following requirements:
 
 - Must include a list of `Controllers` who act as secondary users who control the `Records` set in this ANT.
 - Must have an `Add-Controller` handler to add new `Controllers`.
@@ -28,18 +44,18 @@ The **ARNS-MANAGE-01** Specification includes the following requirements:
 
 This adds flexibility for Arweave Name Process Owners to manage their records, and leverage controllers for other handlers that need additional access controls.
 
-## Objects
+### Objects
 
-The **ARNS-MANAGE-01** specification includes all of the objects contained in **ARNS-CORE-01**.
+The **ARNS-MANAGE-1** specification includes all of the objects contained in **ARNS-CORE-1**.
 
-### ARNS-MANAGE-01 Objects
+#### ARNS-MANAGE-1 Objects
 
 ```
--- ARNS-MANAGE-01 Objects
+-- ARNS-MANAGE-1 Objects
 Owner = Owner or ao.env.Process.Owner
 Controllers = Controllers or { Owner }
 
--- ARNS-CORE-01 Objects
+-- ARNS-CORE-1 Objects
 Records = Records or {
   ["@"] = {
     transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
@@ -48,9 +64,11 @@ Records = Records or {
 }
 ```
 
-## Handlers and Responses
+### Handlers
 
-The following actions are handled in the **ARNS-MANAGE-01** specification and include the actions contained in **ARNS-CORE-01**.
+#### Action Map
+
+The following actions are handled in the **ARNS-MANAGE-1** specification and include the actions contained in **ARNS-CORE-1**.
 
 ```
 ARNSCoreSpecActionMap = {
@@ -71,22 +89,22 @@ ARNSManageSpecActionMap = {
 }
 ```
 
-### Controllers
+#### Controllers
 
 Gets the entire `Controllers` table, including each wallet that has controller permission on this process.
 
 Executable by anonymous users.
 
-#### Parameters
+##### Parameters
 
 No parameters needed.
 
-#### Rules
+##### Rules
 
 - Must return entire `Controllers` object as JSON in the data field of the response notice.
 - Must add `X-`forwarded tags to the response notice.
 
-#### Action
+##### Action
 
 ```
 Send({
@@ -95,7 +113,7 @@ Send({
 })
 ```
 
-#### Responses
+##### Responses
 
 **Valid `Controllers`**
 
@@ -108,26 +126,26 @@ Send({
 }
 ```
 
-### Add-Controller
+#### Add-Controller
 
 Adds a new controller into the `Controllers` table, giving them access to modify the Arweave Name's `Records`.
 
 Executable by the process `Owner` or an authorized user in the `Controllers` table.
 
-#### Parameters
+##### Parameters
 
 | Name       | Type   | Description                                                                                            |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------ |
 | Controller | string | The controller being added to the Controllers table, e.g., iKryOeZQMONi2965nKz528htMMN_sBcjlhc-VncoRjA |
 
-#### Rules
+##### Rules
 
 - Must be an authorized process `Owner` or `Controller`.
 - Must specify a valid `Controller` parameter (string) as a message tag.
 - The `Controller` must not already exist in the `Controllers` table.
 - Must add `X-`forwarded tags to the response notice.
 
-#### Action
+##### Action
 
 ```
 Send({
@@ -137,7 +155,7 @@ Send({
 })
 ```
 
-#### Responses
+##### Responses
 
 **Permission error, not authorized**
 
@@ -174,26 +192,26 @@ Send({
 }
 ```
 
-### Remove-Controller
+#### Remove-Controller
 
 Removes an existing controller in the `Controllers` table, removing their access to modify the Arweave Name's `Records.
 
 Executable by the process `Owner` or an authorized user in the `Controllers` table.
 
-#### Parameters
+##### Parameters
 
 | Name       | Type   | Description                                                                                                           |
 | ---------- | ------ | --------------------------------------------------------------------------------------------------------------------- |
 | Controller | string | The controller wallet address to remove from the Controllers table, e.g., iKryOeZQMONi2965nKz528htMMN_sBcjlhc-VncoRjA |
 
-#### Rules
+##### Rules
 
 - Must be an authorized process `Owner` or `Controller`.
 - Must specify a valid `Controller` parameter (string) as a message tag.
 - The `Controller` must already exist in the `Controllers` table.
 - Must add `X-`forwarded tags to the response notice.
 
-#### Action
+##### Action
 
 ```
 Send({
@@ -203,7 +221,7 @@ Send({
 })
 ```
 
-#### Responses
+##### Responses
 
 **Permission error, not authorized**
 
@@ -240,13 +258,13 @@ Send({
 }
 ```
 
-### Set-Record
+#### Set-Record
 
 Updates an existing undername’s Sub-Domain in the Records table, including modifying the transaction id and time to live.
 
 Executable by the process Owner or an authorized user in the Controllers table.
 
-#### Parameters
+##### Parameters
 
 | Name           | Type   | Description                                                                                 |
 | -------------- | ------ | ------------------------------------------------------------------------------------------- |
@@ -254,7 +272,7 @@ Executable by the process Owner or an authorized user in the Controllers table.
 | Transaction-Id | string | The Arweave transaction ID that this undername points to.                                   |
 | TTL-Seconds    | string | The time to live for this record, indicating how long an ArNS Resolver should cache it for. |
 
-#### Rules
+##### Rules
 
 - Must be an authorized process `Owner` or `Controller`.
 - Must specify a valid `Sub-Domain` parameter (string) as a message tag.
@@ -263,7 +281,7 @@ Executable by the process Owner or an authorized user in the Controllers table.
 - The undername’s `Sub-Domain` must already exist in the `Records` table.
 - Must add `X-`forwarded tags to the response notice.
 
-#### Action
+##### Action
 
 ```
 Send({
@@ -275,7 +293,7 @@ Send({
 })
 ```
 
-#### Responses
+##### Responses
 
 **Permission error, not authorized**
 
@@ -315,24 +333,24 @@ Send({
 }
 ```
 
-### Remove-Record
+#### Remove-Record
 
 Removes an existing undername’s `Sub-Domain` in the Records table.
 
-#### Parameters
+##### Parameters
 
 | Name       | Type   | Description                                                             |
 | ---------- | ------ | ----------------------------------------------------------------------- |
 | Sub-Domain | string | The undername record to remove, e.g., `@`, `ardrive`, or `dapp_ardrive` |
 
-#### Rules
+##### Rules
 
 - Must be an authorized process `Owner` or `Controller`.
 - Must specify a valid `Sub-Domain` parameter (string) as a message tag.
 - The undername’s `Sub-Domain` must already exist in the `Records` table.
 - Must add `X-`forwarded tags to the response notice.
 
-#### Action
+##### Action
 
 ```
 Send({
@@ -342,7 +360,7 @@ Send({
 })
 ```
 
-#### Responses
+##### Responses
 
 **Permission error, not authorized**
 
@@ -379,17 +397,17 @@ Send({
 }
 ```
 
-### State
+#### State
 
-The State handler is updated in **ARNS-MANAGE-01** to return specific information about the state of the process, including all `Records`, its current `Owner`, and all `Controllers`.
+The State handler is updated in **ARNS-MANAGE-1** to return specific information about the state of the process, including all `Records`, its current `Owner`, and all `Controllers`.
 
 Executable by anonymous users.
 
-#### Parameters
+##### Parameters
 
 No parameters necessary.
 
-#### Rules
+##### Rules
 
 - Must return a state object as JSON in the data field of the response notice. The state object must include:
   - Entire `Records` table.
@@ -397,7 +415,7 @@ No parameters necessary.
   - Process `Owner`.
 - Must add `X-`forwarded tags to the response notice.
 
-#### Action
+##### Action
 
 ```
 Send({
@@ -406,7 +424,7 @@ Send({
 })
 ```
 
-#### Responses
+##### Responses
 
 **Valid `State`**
 

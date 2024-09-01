@@ -1,35 +1,28 @@
-# ARNS-RESOLVER-01
+# ARNS-RESOLVE-1
 
-## Overview
+## Status:
 
-An ArNS Resolver is responsible for resolving registered ArNS Names to their corresponding data and process ID. The **ARNS-RESOLVER-01** specification includes the set of patterns and protocols to retrieve the latest state of names and their mapped processes from AO and serve them to users.
+**Draft**
 
-## Resolver Operations
+## Version:
 
-### 1. Pulling Records from the ArNS Registry
+| Version | Description                                          | Date       |
+| ------- | ---------------------------------------------------- | ---------- |
+| 1.0.0   | Initial version of the ARNS-RESOLVE-1 specification. | 2024-09-01 |
 
-The resolver must pull all Records from the ArNS Registry by connecting to an AO Compute Unit. This provides the latest details such as:
+## Abstract
 
-- The associated process.
-- Lease or permabuy status.
-- The number of undernames allowed.
-- The expiration date of the name (if applicable).
+The ARNS-RESOLVE-1 specification defines the protocols and patterns that an ArNS Resolver must follow to accurately retrieve and serve the latest state of Arweave Names from the ArNS Registry. It ensures that names are correctly resolved to their associated data and process IDs within the AR.IO network.
 
-### 2. Requesting the State of the Process
+## Motivation
 
-For each Record, the resolver must request the State of its associated process. This includes important details such as:
+As resolvers are critical to ensuring that users can reliably access data associated with these names, this specification standardizes the process, enabling consistent behavior across different AR.IO gateways and infrastructure. This specification provides the necessary guidelines for developing resolvers that handle the retrieval and resolution of Arweave Names via their associated AO Processes.
 
-- Ownership information.
-- Data pointers.
-- Time-to-live (TTL) settings for the given ArNS name.
+By establishing clear protocols for pulling records, requesting process states, and handling undernames, ARNS-RESOLVE-1 ensures that resolvers operate efficiently and securely. This foundation is crucial for maintaining the integrity and performance of the Arweave Name System, particularly as the ecosystem scales and more complex use cases emerge.
 
-If the process does not respond to the State request, the resolver will be unable to fully resolve its Records.
+## Specification
 
-### 3. Local Storage of Data
-
-The resolver should store all retrieved information locally to facilitate easy lookups by users or downstream infrastructure, such as an AR.IO Gateway.
-
-## Resolution Protocols
+### Overview
 
 The resolver must adhere to the following protocols to correctly identify, resolve, and serve ArNS names:
 
@@ -47,7 +40,32 @@ The resolver must adhere to the following protocols to correctly identify, resol
   - `x-arns-process-id: tVBd6CHJD1L46sjFBb-Vmr2WHu6FzNyWKJnO42RT_lc`
   - `x-arns-resolved-id: wHt7VINjV_oKGtb-f7yB-oajzNb9qTKzkVoFoXDFStI`
 
-## Performance and Compliance
+### Standard Operations
+
+#### 1. Pulling Records from the ArNS Registry
+
+The resolver must pull all Records from the ArNS Registry by connecting to an AO Compute Unit. This provides the latest details such as:
+
+- The associated process.
+- Lease or permabuy status.
+- The number of undernames allowed.
+- The expiration date of the name (if applicable).
+
+#### 2. Requesting the State of the Process
+
+For each Record, the resolver must request the State of its associated process. This includes important details such as:
+
+- Ownership information.
+- Data pointers.
+- Time-to-live (TTL) settings for the given ArNS name.
+
+If the process does not respond to the State request, the resolver will be unable to fully resolve its Records.
+
+#### 3. Local Storage of Data
+
+The resolver should store all retrieved information locally to facilitate easy lookups by users or downstream infrastructure, such as an AR.IO Gateway.
+
+### Performance and Compliance
 
 The resolver is expected to perform the above actions in a timely manner to best serve users and/or to meet the standards defined in the AR.IO Observation and Incentive protocol.
 
