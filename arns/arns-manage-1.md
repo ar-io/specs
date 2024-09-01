@@ -16,7 +16,7 @@ The **ARNS-MANAGE-1** specification introduces additional management and control
 
 ## Motivation
 
-The **ARNS-MANAGE-1** specification builds on the foundational ARNS-CORE-1 by adding essential management capabilities. As Arweave Names require ongoing updates and adjustments, this specification ensures that process owners have the tools needed to manage records and delegate control to other users securely. By standardizing these management operations, **ARNS-MANAGE-1** enables efficient and consistent name management across the Arweave ecosystem.
+The **ARNS-MANAGE-1** specification builds on the foundational **ARNS-CORE-1** by adding essential management capabilities. As Arweave Names require ongoing updates and adjustments, this specification ensures that process owners have the tools needed to manage records and delegate control to other users securely. By standardizing these management operations, **ARNS-MANAGE-1** enables efficient and consistent name management across the Arweave ecosystem.
 
 #### Language of Implementation
 

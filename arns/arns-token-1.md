@@ -16,7 +16,7 @@ The **ARNS-TOKEN-1** specification defines the framework for creating and managi
 
 ## Motivation
 
-The **ARNS-TOKEN-1** specification provides a standardized approach for adding token-like features to Arweave Name Tokens (ANTs), enabling them to be transferred, tracked, and managed as single, indivisible assets.
+The **ARNS-TOKEN-1** specification builds off of the **ARNS-MANAGE-1** and **ARNS-CORE-1** specifications and provides a standardized approach for adding token-like features to Arweave Name Tokens (ANTs), enabling them to be transferred, tracked, and managed as single, indivisible assets.
 
 By implementing this specification, developers can extend the functionality of Arweave Names to include ownership transfer, metadata management, and integration with external services like block explorers and marketplaces. This allows for more dynamic and flexible use cases within the Arweave ecosystem, such as tokenizing digital identities or assets on the Permaweb.
 
