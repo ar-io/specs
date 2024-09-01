@@ -4,7 +4,7 @@
 
 These specifications outline the overview, structure, and operations of the Arweave Name System. They are used to create Arweave Name Tokens (ANTs), which are AO Processes utilized within the Arweave Name System (ArNS), and resolve them to Arweave identities and data. By defining both the standard and optional interfaces for these processes, this document aims to ensure consistency and interoperability for developers integrating ANTs into their own processes or applications.
 
-### Motivation
+## Motivation
 
 The building blocks in the Arweave Name Specifications ensure that ArNS can serve a broad spectrum of use cases, from simple name resolution to complex, multi-layered digital services and AO processes. This could include custom logic or interfaces suited to particular user groups or technical requirements. Developers can utilize the open protocols and APIs in these specifications to create resolvers and Arweave Name Processes tailored to specific applications or networks.
 
