@@ -1,5 +1,15 @@
 # Arweave Name System Specifications (ArNSS)
 
+## Status:
+
+**Draft**
+
+## Version:
+
+| Version | Description                                                         | Date       |
+| ------- | ------------------------------------------------------------------- | ---------- |
+| 1.0.0   | Initial version of the Arweave Name System Specifications overview. | 2024-09-01 |
+
 ## Abstract
 
 These specifications outline the overview, structure, and operations of the Arweave Name System. They are used to create Arweave Name Tokens (ANTs), which are AO Processes utilized within the Arweave Name System (ArNS), and resolve them to Arweave identities and data. By defining both the standard and optional interfaces for these processes, this document aims to ensure consistency and interoperability for developers integrating ANTs into their own processes or applications.
