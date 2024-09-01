@@ -80,7 +80,7 @@ The Arweave Name System Specifications span across several specs that can be com
 - **ARNS-TOKEN-1**: Specifies the creation and structure of Arweave Name Tokens, focusing on token functionality and metadata.
 - **ARNS-MANAGE-1**: Details the management and control features for Arweave Names, building on the core process specification.
 - **ARNS-CORE-1**: The foundational AO process specification for ArNS Name resolution, detailing the core requirements for resolvers.
-- **ARNS-RESOLVE-1**: Outlines the protocols for resolving and serving Arweave Names across the AR.IO network.
+- **ARNS-RESOLVER-1**: Outlines the protocols for resolving and serving Arweave Names across the AR.IO network.
 - **ARNS-ROUTING-1**: Describes the `ar://` schema and routing protocols for accessing permanent data and domain names via AR.IO Gateways.
 
 Applications like `https://arns.ar.io` can leverage this framework via SDKs like the AR.IO SDK or extend them further to create a rich ecosystem of multi-functional AO processes and tooling that support the needs of ArNS name buying, management, and resolution.
@@ -103,7 +103,7 @@ By extending the utility of ArNS across different technologies, developers can f
 
 The following implementations act as blueprints for deploying Arweave Name Processes and Tokens in AOS or other platforms. Developers can utilize these files to layer on the specification they need onto their new or existing process.
 
-- ARNS-RESOLVE-1 https://github.com/ar-io/arns-resolver (Typescript, Node.js, Docker)
+- ARNS-RESOLVER-1 https://github.com/ar-io/arns-resolver (Typescript, Node.js, Docker)
 - ARNS-CORE-1 https://github.com/ar-io/ao-pilot/blob/develop/scripts/anp-resolve-01.lua (Lua)
 - ARNS-MANAGE-1 https://github.com/ar-io/ao-pilot/blob/develop/scripts/anp-control-01.lua (Lua)
 - ARNS-TOKEN-1 https://github.com/ar-io/ar-io-ant-process (Lua)

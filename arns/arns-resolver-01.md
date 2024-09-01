@@ -1,4 +1,4 @@
-# ARNS-RESOLVE-1
+# ARNS-RESOLVER-1
 
 ## Status:
 
@@ -6,19 +6,19 @@
 
 ## Version:
 
-| Version | Description                                          | Date       |
-| ------- | ---------------------------------------------------- | ---------- |
-| 1.0.0   | Initial version of the ARNS-RESOLVE-1 specification. | 2024-09-01 |
+| Version | Description                                           | Date       |
+| ------- | ----------------------------------------------------- | ---------- |
+| 1.0.0   | Initial version of the ARNS-RESOLVER-1 specification. | 2024-09-01 |
 
 ## Abstract
 
-The ARNS-RESOLVE-1 specification defines the protocols and patterns that an ArNS Resolver must follow to accurately retrieve and serve the latest state of Arweave Names from the ArNS Registry. It ensures that names are correctly resolved to their associated data and process IDs within the AR.IO network.
+The **ARNS-RESOLVER-1** specification defines the protocols and patterns that an ArNS Resolver must follow to accurately retrieve and serve the latest state of Arweave Names from the ArNS Registry. It ensures that names are correctly resolved to their associated data and process IDs within the AR.IO network.
 
 ## Motivation
 
 As resolvers are critical to ensuring that users can reliably access data associated with these names, this specification standardizes the process, enabling consistent behavior across different AR.IO gateways and infrastructure. This specification provides the necessary guidelines for developing resolvers that handle the retrieval and resolution of Arweave Names via their associated AO Processes.
 
-By establishing clear protocols for pulling records, requesting process states, and handling undernames, ARNS-RESOLVE-1 ensures that resolvers operate efficiently and securely. This foundation is crucial for maintaining the integrity and performance of the Arweave Name System, particularly as the ecosystem scales and more complex use cases emerge.
+By establishing clear protocols for pulling records, requesting process states, and handling undernames, **ARNS-RESOLVER-1** ensures that resolvers operate efficiently and securely. This foundation is crucial for maintaining the integrity and performance of the Arweave Name System, particularly as the ecosystem scales and more complex use cases emerge.
 
 ## Specification
 
