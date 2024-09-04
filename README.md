@@ -66,4 +66,6 @@ We welcome contributions! Here’s how you can get involved:
 - **Open Issues**: If you spot inconsistencies or have suggestions, open an issue here.
 - **Submit a Pull Request**: Fork the repo, create a branch, and submit a pull request. Ensure your changes follow the principles outlined above.
 
-Check out our ./CONTRIBUTING.md file for more detailed guidelines.
+Check out our [contributing] file for more detailed guidelines.
+
+[contributing]: ./CONTRIBUTING
