@@ -18,13 +18,13 @@ Specifications provide the foundational structure for the AR.IO Network. They en
 
 ### Arweave Name System (ArNS)
 
-- **ARNS-CORE-01**: Core specification for resolving Arweave Names to transaction IDs.
-- **ARNS-MANAGE-01**: Control and management features for Arweave Name Tokens (ANTs).
-- **ARNS-TOKEN-01**: Adds token functionality, including transferability and metadata.
+- **ARNS-CORE**: Core specification for resolving Arweave Names to transaction IDs.
+- **ARNS-MANAGE**: Control and management features for Arweave Names.
+- **ARNS-TOKEN**: Adds token functionality, including transferability and metadata.
 
 ### Routing and URI Handling
 
-- **ARNS-ROUTING-01**: Defines the AR.IO Wayfinder Protocol for routing Arweave content.
+- **ARNS-ROUTING**: Defines the AR.IO Wayfinder Protocol for routing to Arweave Names and content.
 
 ### Path Manifest Specification
 
