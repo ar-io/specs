@@ -1,6 +1,6 @@
-# AR.IO Network specifications.
+# AR.IO Network Specifications
 
-Welcome to the AR.IO Network Specifications repository! This repository contains the official specifications for building on the AR.IO Network, a decentralized gateway protocol for interacting with Arweave. These specifications are designed to create a unified, interoperable, and resilient ecosystem of tools and applications built on top of Arweave.
+Welcome to the AR.IO Network Specifications repository! This repository contains the official specifications for building on the AR.IO Network, a decentralized gateway network for interacting with Arweave. These specifications are designed to create a unified, interoperable, and resilient ecosystem of tools and applications built that leverage the various protocols and services offered by the AR.IO Network.
 
 ## Overview
 
@@ -68,4 +68,4 @@ We welcome contributions! Here’s how you can get involved:
 
 Check out our [contributing] file for more detailed guidelines.
 
-[contributing]: ./CONTRIBUTING
+[contributing]: ./CONTRIBUTING.md

@@ -28,4 +28,4 @@ NOTE: Contribution implies licensing under the terms of [LICENSE]
 
 [license]: ./LICENSE
 [conventional commits]: https://www.conventionalcommits.org/en/v1.0.0/
-[principles and practices]: ./README
+[principles and practices]: ./README.md
