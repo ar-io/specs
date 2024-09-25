@@ -9,6 +9,7 @@
 | Version | Description                                                         | Date       |
 | ------- | ------------------------------------------------------------------- | ---------- |
 | 1.0.0   | Initial version of the Arweave Name System Specifications overview. | 2024-09-01 |
+| 1.0.1   | Updated reference implementation links                              | 2024-09-24 |
 
 ## Abstract
 
@@ -114,8 +115,8 @@ However, developers are not restricted to using Lua exclusively when building ne
 The following implementations act as blueprints for deploying Arweave Name Processes and Tokens in AOS or other platforms. Developers can utilize these files to layer on the specification they need onto their new or existing process.
 
 - ARNS-RESOLVER-1 https://github.com/ar-io/arns-resolver (Typescript, Node.js, Docker)
-- ARNS-CORE-1 https://github.com/ar-io/ao-pilot/blob/develop/scripts/anp-resolve-01.lua (Lua)
-- ARNS-MANAGE-1 https://github.com/ar-io/ao-pilot/blob/develop/scripts/anp-control-01.lua (Lua)
+- ARNS-CORE-1 https://github.com/ar-io/ao-pilot/blob/develop/scripts/arns-core-1.lua (Lua)
+- ARNS-MANAGE-1 https://github.com/ar-io/ao-pilot/blob/develop/scripts/arns-manage-1.lua (Lua)
 - ARNS-TOKEN-1 https://github.com/ar-io/ar-io-ant-process (Lua)
 - AR.IO SDK https://github.com/ar-io/ar-io-sdk (Typescript)
 

@@ -6,9 +6,10 @@
 
 ## Version:
 
-| Version | Description                                            | Date       |
-| ------- | ------------------------------------------------------ | ---------- |
-| 1.0.0   | Initial version of the **ARNS-TOKEN-1** specification. | 2024-09-01 |
+| Version | Description                                               | Date       |
+| ------- | --------------------------------------------------------- | ---------- |
+| 1.0.0   | Initial version of the **ARNS-TOKEN-1** specification.    | 2024-09-01 |
+| 1.0.1   | Fixed Credit/Debit response notices for Transfer handler. | 2024-09-24 |
 
 ## Abstract
 
@@ -401,11 +402,21 @@ Send({
 **Valid parameters**
 
 ```
+-- Debit-Notice message template, that is sent to the Sender of the transfer
 {
   Target = msg.From,
-  Action = "Transfer-Notice",
-  Data = json.encode({ Ticker = Ticker }),
-  ... other forwarded tag name and value pairs
+  Action = "Debit-Notice",
+  Recipient = msg.Tags.Recipient,
+  Quantity = msg.Tags.Quantity,
+  Data = "You transferred " .. msg.Tags.Quantity .. " to " .. msg.Tags.Recipient,
+}
+-- Credit-Notice message template, that is sent to the Recipient of the transfer
+{
+  Target = msg.Tags.Recipient,
+  Action = "Credit-Notice",
+  Sender = msg.From,
+  Quantity = msg.Tags.Quantity,
+  Data = "You received " .. msg.Tags.Quantity .. " from " .. msg.From,
 }
 ```
 
