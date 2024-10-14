@@ -10,7 +10,7 @@
 | ------- | --------------------------------------------------------- | ---------- |
 | 1.0.0   | Initial version of the **ARNS-TOKEN-1** specification.    | 2024-09-01 |
 | 1.0.1   | Fixed Credit/Debit response notices for Transfer handler. | 2024-09-24 |
-| 1.0.2   | Added 'description' and 'keywords' metadata.              | 2024-09-24 |
+| 1.0.2   | Added 'description' and 'keywords' metadata.              | 2024-10-14 |
 
 ## Abstract
 
@@ -623,7 +623,7 @@ Send({
 
 #### State
 
-The State handler is updated in **ARNS-TOKEN-1** to return all information about the state of the token, including all `Records`, `Owner`, `Controllers`, `Balances`, `Name`, `Ticker`, `Logo`, `Denomination`, and `TotalSupply`.
+The State handler is updated in **ARNS-TOKEN-1** to return all information about the state of the token, including all `Records`, `Owner`, `Controllers`, `Balances`, `Name`, `Ticker`, `Logo`, `Description`, `Keywords`, `Denomination`, and `TotalSupply`.
 
 Executable by anonymous users.
 
