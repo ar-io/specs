@@ -373,7 +373,7 @@ Executable by the process `Owner` or an authorized user in the `Controllers` tab
 - Must be an authorized process `Owner` or `Controller`.
 - Must specify a valid `Keywords` parameter (table) as a message tag.
 - Each `Keyword` must not be longer than 32 characters.
-- Each `Keyword` must consist of alphanumeric characters, dashes or underscores.
+- Each `Keyword` must consist of alphanumeric characters, dashes, underscores, @ or #.
 - Each `Keyword` must not include spaces.
 - Each `Keyword` must be unique in the table of `Keywords`.
 - There must not be more than 16 total `Keywords`.
