@@ -51,7 +51,7 @@ The **ARNS-TOKEN-1** Specification includes the following requirements:
 - Must have a table of `Keywords` used to further describe this ANT.
   - `Keywords` must not contain more than 16 keywords.
   - Each `Keyword` must be a string eg. `File-sharing`
-  - Each `Keyword` must consist of alphanumeric characters, dashes and underscores.
+  - Each `Keyword` must consist of alphanumeric characters, dashes, underscores, @ or #.
   - Each `Keyword` must not be longer than 32 characters.
   - Each `Keyword` must not include spaces.
   - Each `Keyword` must be unique in the table of `Keywords`.
