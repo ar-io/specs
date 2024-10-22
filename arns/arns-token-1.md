@@ -10,6 +10,7 @@
 | ------- | --------------------------------------------------------- | ---------- |
 | 1.0.0   | Initial version of the **ARNS-TOKEN-1** specification.    | 2024-09-01 |
 | 1.0.1   | Fixed Credit/Debit response notices for Transfer handler. | 2024-09-24 |
+| 1.1.0   | Added 'description' and 'keywords' metadata.              | 2024-10-14 |
 
 ## Abstract
 
@@ -38,11 +39,29 @@ However, developers are not restricted to using Lua exclusively when building ne
 The **ARNS-TOKEN-1** Specification includes the following requirements:
 
 - Must have a `Name` which is a friendly nickname of this ANT.
+  - Must be a string, eg. `ArDrive`.
 - Must have a `Ticker` which is a short token symbol, shown in block explorers and marketplaces.
-- Must have a `Logo` that is an Arweave Transaction ID that contains an icon used by downstream apps.
-- Must have a `Denomination` of 0 indicating the decimal places used by the token.
-- Must have a `TotalSupply` of 1 indicating the total amount of tokens minted.
-- Must have a `Balances` object which stores the current balance of minted Tokens.
+  - Must be a string, eg. `ANT-ARDRIVE`.
+- Must have a `Logo` image icon used by downstream apps.
+  - Must be a string eg. `Sie_26dvgyok0PZD_-iQAFOhOd5YxDTkczOLoqTTL_A`.
+  - Must be an Arweave transaction.
+- Must have a `Description` that is a brief description of this ANT and its purpose or use.  
+  - Must be a string eg. `ArDrive is a permaweb app that lets you upload, download and share your files easily.`
+  - Must not be longer than 512 characters.
+- Must have a table of `Keywords` used to further describe this ANT.
+  - `Keywords` must not contain more than 16 keywords.
+  - Each `Keyword` must be a string eg. `File-sharing`
+  - Each `Keyword` must consist of alphanumeric characters, dashes, underscores, @ or #.
+  - Each `Keyword` must not be longer than 32 characters.
+  - Each `Keyword` must not include spaces.
+  - Each `Keyword` must be unique in the table of `Keywords`.
+- Must have a `Denomination`, in compliance with the AO Token Blueprint, indicating the decimal places used by the token.
+  - Must be an integer.
+  - Must be set to 0, indicating no decimal places used by the Arweave Name Token.
+- Must have a `TotalSupply`, in compliance with the AO Token Blueprint, indicating the total amount of tokens minted.
+  - Must be an integer.
+  - Must be set to 1, indicating a single token in the supply.
+- Must have a `Balances` table which stores the current balance of minted Tokens.
   - The Process `Owner` should be the only Token holder with a balance of 1.
 - Must have a `Balance` handler to read an individual user’s Token Balance.
 - Must have a `Balances` handler to read all Token Balances.
@@ -50,7 +69,9 @@ The **ARNS-TOKEN-1** Specification includes the following requirements:
   - All Transfers move the single Token balance and Process Owner to the Recipient.
   - Authorized for the Process `Owner` only.
   - Transfer should have a `State` call-back message to the ANT Registry.
-- Must have an `Info` handler to read the Token metadata including `Name`, `Ticker`, `TotalSupply`, `Logo`, `Denomination`, and `Owner`.
+- Must have an `Info` handler to read the Token metadata including `Name`, `Ticker`, `Total-Supply`, `Logo`, `Denomination`, `Description`, `Keywords` and `Owner`.
+  - `Total-Supply` must be returned as an integer string.
+  - `Denomination` must be returned as an integer string.
 - Must have a `Total-Supply `handler to calculate the total supply of outstanding Token balances.
 - Should have a `Set-Ticker` handler to change the ANT’s ticker.
   - Authorized for the Process `Owner` and `Controllers`.
@@ -58,7 +79,11 @@ The **ARNS-TOKEN-1** Specification includes the following requirements:
   - Authorized for the Process `Owner` and `Controllers`.
 - Should have a `Set-Logo` handler to change the ANT’s logo.
   - Authorized for the Process `Owner` and `Controllers`.
-- Handler to read entire ANT State must be updated to also return `Balances`, `Name`, `Ticker`, `Logo`, `Denomination`, and `TotalSupply`.
+- Should have a `Set-Description` handler to change the ANT’s description.
+  - Authorized for the Process `Owner` and `Controllers`.
+- Should have a `Set-Keywords` handler to change the ANT’s keywords.
+  - Authorized for the Process `Owner` and `Controllers`.
+- Handler to read entire ANT State must be updated to also return `Balances`, `Name`, `Ticker`, `Logo`, `Denomination`, `Description`, `Keywords` and `TotalSupply`.
 
 The **ARNS-TOKEN-1** Specification does not include the ability to `Mint` or `Burn`; however, developers can extend ANTs to new functionality if needed.
 
@@ -70,9 +95,11 @@ The **ARNS-TOKEN-1** specification leverages the general AO Token and Subledger 
 
 ```
 -- ARNS-TOKEN-1 Objects
-Name = Name or "Arweave Name Token" -- optional
-Ticker = Ticker or "ANT" -- optional
-Logo = Logo or "Sie_26dvgyok0PZD_-iQAFOhOd5YxDTkczOLoqTTL_A" -- optional
+Name = Name or "Arweave Name Token"
+Ticker = Ticker or "ANT"
+Description = Description or "This is an Arweave Name Token."
+Keywords = Keywords or {}
+Logo = Logo or "Sie_26dvgyok0PZD_-iQAFOhOd5YxDTkczOLoqTTL_A"
 Denomination = Denomination or 0
 TotalSupply = TotalSupply or 1
 
@@ -117,6 +144,8 @@ ARNSTokenSpecActionMap = {
   -- write
   SetName = "Set-Name",
   SetTicker = "Set-Ticker",
+  SetDescription = "Set-Description"
+  SetKeywords = "Set-Keywords"
 }
 
 TokenSpecActionMap = {
@@ -261,6 +290,142 @@ Send({
 }
 ```
 
+#### Set-Description
+
+Updates the `Description` of this ANT.
+
+Executable by the process `Owner` or an authorized user in the `Controllers` table.
+
+##### Parameters
+
+| Name   | Type   | Description                 |
+| ------ | ------ | --------------------------- |
+| Description | string | The new Description for the ANT. |
+
+##### Rules
+
+- Must be an authorized process `Owner` or `Controller`.
+- Must specify a valid `Description` parameter (string) as a message tag.
+- `Description` must not be longer than 512 characters.
+- Should add `X-`forwarded tags to the response notice.
+
+##### Action
+
+```
+Send({
+  Target = "{Process Identifier}",
+  Action = "Set-Description",
+  Description = "ArDrive is an app that makes it easy to upload, download and share your public or private files on Arweave"
+})
+```
+
+##### Responses
+
+**Permission error, not authorized**
+
+```
+{
+  Target = msg.From,
+  Action = "Invalid-Set-Description-Notice",
+  Data = permissionErr,
+  Error = "Set-Description-Error",
+  ["Message-Id"] = msg.Id
+}
+```
+
+**Invalid parameters**
+
+```
+{
+  Target = msg.From,
+  Action = "Invalid-Set-Description-Notice",
+  Data = descriptionRes,
+  Error = "Set-Description-Error",
+  ["Message-Id"] = msg.Id,
+}
+```
+
+**Valid parameters**
+
+```
+{
+  Target = msg.From,
+  Action = "Set-Description-Notice",
+  Data = json.encode({ Description = Description }),
+  ... other forwarded tag name and value pairs
+}
+```
+
+#### Set-Keywords
+
+Updates the `Keywords` of this ANT.
+
+Executable by the process `Owner` or an authorized user in the `Controllers` table.
+
+##### Parameters
+
+| Name   | Type   | Description                 |
+| ------ | ------ | --------------------------- |
+| Keywords | table | The new Keywords for the ANT. |
+
+##### Rules
+
+- Must be an authorized process `Owner` or `Controller`.
+- Must specify a valid `Keywords` parameter (table) as a message tag.
+- Each `Keyword` must not be longer than 32 characters.
+- Each `Keyword` must consist of alphanumeric characters, dashes, underscores, @ or #.
+- Each `Keyword` must not include spaces.
+- Each `Keyword` must be unique in the table of `Keywords`.
+- There must not be more than 16 total `Keywords`.
+- Should add `X-`forwarded tags to the response notice.
+
+##### Action
+
+```
+Send({
+  Target = "{Process Identifier}",
+  Action = "Set-Description",
+  Description = "ArDrive is an app that makes it easy to upload, download and share your public or private files on Arweave"
+})
+```
+
+##### Responses
+
+**Permission error, not authorized**
+
+```
+{
+  Target = msg.From,
+  Action = "Invalid-Set-Description-Notice",
+  Data = permissionErr,
+  Error = "Set-Description-Error",
+  ["Message-Id"] = msg.Id
+}
+```
+
+**Invalid parameters**
+
+```
+{
+  Target = msg.From,
+  Action = "Invalid-Set-Description-Notice",
+  Data = descriptionRes,
+  Error = "Set-Description-Error",
+  ["Message-Id"] = msg.Id,
+}
+```
+
+**Valid parameters**
+
+```
+{
+  Target = msg.From,
+  Action = "Set-Description-Notice",
+  Data = json.encode({ Description = Description }),
+  ... other forwarded tag name and value pairs
+}
+```
+
 #### Balance
 
 Returns the balance of a target; if a target is not supplied, then the balance of the sender of the message must be returned.
@@ -277,7 +442,7 @@ AO Token Specification reference: https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#Balan
 
 ##### Rules
 
-- Must return entire `Balances` object as JSON in the data field of the response notice.
+- Must return entire `Balances` table as JSON in the data field of the response notice.
 - Should add `X-`forwarded tags to the response notice.
 
 ##### Action
@@ -312,7 +477,7 @@ AO Token Specification reference: https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#Balan
 
 ##### Rules
 
-- Must return entire `Balances` object as JSON in the data field of the response notice.
+- Must return entire `Balances` table as JSON in the data field of the response notice.
 - Should add `X-`forwarded tags to the response notice.
 
 ##### Action
@@ -432,10 +597,10 @@ No parameters necessary.
 
 ##### Rules
 
-- Must return an info object as JSON in the data field and as tags of the response notice. Info object must include:
+- Must return general process information as encoded JSON in the data field and as tags of the response notice. Info JSON must include:
   - Process `Owner`
-  - `Name`, `Ticker`, `Logo`
-  - `Denomination` and `Total-Supply`
+  - `Name`, `Ticker`, `Logo`, `Description`, and `Keywords`
+  - `Denomination` and `Total-Supply` as integer strings.
 
 ##### Action
 
@@ -476,7 +641,7 @@ Send({
 
 #### State
 
-The State handler is updated in **ARNS-TOKEN-1** to return all information about the state of the token, including all `Records`, `Owner`, `Controllers`, `Balances`, `Name`, `Ticker`, `Logo`, `Denomination`, and `TotalSupply`.
+The State handler is updated in **ARNS-TOKEN-1** to return all information about the state of the token, including all `Records`, `Owner`, `Controllers`, `Balances`, `Name`, `Ticker`, `Logo`, `Description`, `Keywords`, `Denomination`, and `TotalSupply`.
 
 Executable by anonymous users.
 
@@ -486,12 +651,12 @@ No parameters necessary.
 
 ##### Rules
 
-- Must return a state object as JSON in the data field of the response notice. State object must include:
+- Must return the full state of the process as encoded JSON in the data field of the response notice. State information must include:
   - Entire `Records` table
   - Entire `Controllers` table
   - Entire `Balances` table
   - Process `Owner`
-  - `Name`, `Ticker`, `Logo`
+  - `Name`, `Ticker`, `Logo`, `Description` and `Keywords`
   - `Denomination` and `TotalSupply`
 - Must add `X-`forwarded tags to the response notice.
 
@@ -520,6 +685,8 @@ Send({
     Name = Name,
     Ticker = Ticker,
     Logo = Logo,
+    Description = Description,
+    Keywords = Keywords,
     Denomination = Denomination,
     TotalSupply = TotalSupply,
   }),
