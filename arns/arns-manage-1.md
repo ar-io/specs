@@ -277,7 +277,7 @@ Executable by the process Owner or an authorized user in the Controllers table.
 - Must be an authorized process `Owner` or `Controller`.
 - Must specify a valid `Sub-Domain` parameter (string) as a message tag.
 - Must specify a valid `Transaction-Id` parameter (string) as a message tag.
-- Must specify a valid `TTL-Seconds` parameter (string) as a message tag.
+- Must specify a valid `TTL-Seconds` parameter (string) as a message tag, which is an integer between 60 and 86400.
 - The undername’s `Sub-Domain` must already exist in the `Records` table.
 - Must add `X-`forwarded tags to the response notice.
 
@@ -289,7 +289,7 @@ Send({
   Action = "Set-Record",
   ["Sub-Domain"] = "foo",
   ["Transaction-Id"] = "{Base64 URL}",
-  ["TTL-Seconds"] = "900"
+  ["TTL-Seconds"] = "60"
 })
 ```
 
