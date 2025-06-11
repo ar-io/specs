@@ -66,7 +66,7 @@ Registering a name requires spending IO tokens corresponding to the name’s cha
 
 ### Arweave Name Tokens (ANTs)
 
-Arweave Name Tokens (ANTs) are specialized AO Processes that manage the ownership, configuration, and data pointer records for names registered in ArNS. They facilitate the mapping of names to various types of Permaweb data—whether a webpage, dApp, or file—through their respective Arweave transaction IDs. They can be transferred as needed, like any other non-fungible token.
+Arweave Name Tokens (ANTs) are specialized AO Processes that manage the ownership, configuration, and data pointer records for names registered in ArNS. They facilitate the mapping of names to various types of Permaweb data—whether a webpage, dApp, or file—by referencing either Arweave transaction IDs or other ArNS names. They can be transferred as needed, like any other non-fungible token.
 
 - **Process Control**: Each registered ArNS name points to the Process ID of an ANT. The owner of this ANT controls how the ArNS name functions. ANT owners can upgrade their processes as needed, or they can set the process Owner to null, rendering the process code immutable.
 - **Resolution**: AR.IO Gateways and other ArNS Resolvers read the state from these registered ANTs to properly resolve and serve the data they reference.

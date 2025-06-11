@@ -33,6 +33,7 @@ The resolver must adhere to the following protocols to correctly identify, resol
   - The maximum length of each label is 63 characters, and a full domain name can have a maximum of 253 characters.
 - **Root Record**: The Record `"@"` is used for the root of the ArNS Name. All undernames for a given name must be sorted alphabetically, with the root `@` being at the top.
 - **Regex Compliance**: Must not serve undernames that don't match the ArNS standard regex pattern.
+- **Record Values**: Records may reference an Arweave transaction ID, another ArNS name, or both. When both are present the resolver should prefer the `arns` value and only fall back to the `txId` if dereferencing fails.
 - **Caching**:
   - Must cache each undername for the time-to-live (TTL) associated with it.
   - The minimum TTL is 900 seconds (15 minutes).
@@ -64,6 +65,10 @@ If the process does not respond to the State request, the resolver will be unabl
 #### 3. Local Storage of Data
 
 The resolver should store all retrieved information locally to facilitate easy lookups by users or downstream infrastructure, such as an AR.IO Gateway.
+
+#### 4. Dereferencing ArNS Records
+
+When a record specifies an `arns` value, the resolver must continue resolving that name internally until it produces a transaction ID. This internal resolution is known as **dereferencing** and must not rely on HTTP redirects. Resolvers may set their own maximum dereference depth and should use a Set-like structure to track visited names to detect loops. If a loop is detected or dereferencing fails, the resolver should fall back to the record's `txId` value if available. If no `txId` can be used, resolution must fail.
 
 ### Performance and Compliance
 

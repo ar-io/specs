@@ -34,11 +34,12 @@ The **ARNS-CORE-1** Specification includes the following requirements for valid,
 
 **Records Table**:
 
-- Must have a `Records` table containing `subDomains` and their associated `transactionId` and `ttlSeconds`.
+- Must have a `Records` table containing `subDomains` and their associated record values.
 - The `Records` object should be sorted alphabetically.
 - Each Record subdomain must be a string.
-- Each Record must include a `transactionId`, which is where this subdomain will point to.
-- Each Record must include a `ttlSeconds` value, which is the suggested time for caching by ArNS Name Resolvers.
+- Record values must be objects and may contain `txId`, `arns`, or both.
+  - When both `txId` and `arns` are supplied, resolution should prefer `arns`, falling back to `txId` if dereferencing the `arns` name fails.
+- Each record object must include a `ttlSeconds` value, which is the suggested time for caching by ArNS Name Resolvers.
 - The `ttlSeconds` value must not be less than 900 seconds.
 - `Records` must have a default Record, `@`, which points to an Arweave Transaction ID.
 - `UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk` can be used as a placeholder Transaction ID.
@@ -72,7 +73,7 @@ The **ARNS-CORE-1** specification includes all the objects needed to support ArN
 ```
 Records = Records or {
     ["@"] = {
-        transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
+        txId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
         ttlSeconds = 3600
     }
 }
