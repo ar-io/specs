@@ -110,7 +110,7 @@ Controllers = Controllers or { Owner }
 -- ARNS-CORE-1 Objects
 Records = Records or {
   ["@"] = {
-    transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
+    txId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
     ttlSeconds = 3600
   }
 }

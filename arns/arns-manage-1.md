@@ -58,7 +58,7 @@ Controllers = Controllers or { Owner }
 -- ARNS-CORE-1 Objects
 Records = Records or {
   ["@"] = {
-    transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
+    txId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
     ttlSeconds = 3600
   }
 }
@@ -260,23 +260,24 @@ Send({
 
 #### Set-Record
 
-Updates an existing undername’s Sub-Domain in the Records table, including modifying the transaction id and time to live.
+Updates an existing undername’s Sub-Domain in the Records table. Records may reference a transaction ID, another ArNS name, or both.
 
 Executable by the process Owner or an authorized user in the Controllers table.
 
 ##### Parameters
 
-| Name           | Type   | Description                                                                                 |
-| -------------- | ------ | ------------------------------------------------------------------------------------------- |
-| Sub-Domain     | string | The undername record to update, e.g., `@`, `ardrive`, or `dapp_ardrive`                     |
-| Transaction-Id | string | The Arweave transaction ID that this undername points to.                                   |
-| TTL-Seconds    | string | The time to live for this record, indicating how long an ArNS Resolver should cache it for. |
+| Name           | Type   | Description |
+| -------------- | ------ | -------------------------------- |
+| Sub-Domain     | string | The undername record to update, e.g., `@`, `ardrive`, or `dapp_ardrive` |
+| Tx-Id          | string | *(Optional)* The Arweave transaction ID this undername points to. |
+| Arns           | string | *(Optional)* Another ArNS name to dereference, e.g., `dapp_ardrive` |
+| TTL-Seconds    | string | The time to live for this record, indicating how long an ArNS Resolver should cache it. |
 
 ##### Rules
 
 - Must be an authorized process `Owner` or `Controller`.
 - Must specify a valid `Sub-Domain` parameter (string) as a message tag.
-- Must specify a valid `Transaction-Id` parameter (string) as a message tag.
+- Must supply either a `Tx-Id` tag, an `Arns` tag, or both.
 - Must specify a valid `TTL-Seconds` parameter (string) as a message tag, which is an integer between 60 and 86400.
 - The undername’s `Sub-Domain` must already exist in the `Records` table.
 - Must add `X-`forwarded tags to the response notice.
@@ -288,7 +289,8 @@ Send({
   Target = "{Process Identifier}",
   Action = "Set-Record",
   ["Sub-Domain"] = "foo",
-  ["Transaction-Id"] = "{Base64 URL}",
+  ["Tx-Id"] = "{Base64 URL}",
+  ["Arns"] = "dapp_ardrive",
   ["TTL-Seconds"] = "60"
 })
 ```
@@ -325,10 +327,11 @@ Send({
 {
   Target = msg.From,
   Action = "Set-Record-Notice",
-  Data = json.encode({
-    transactionId = transactionId,
-    ttlSeconds = ttlSeconds,
-  }),
+    Data = json.encode({
+      txId = txId,
+      arns = arns,
+      ttlSeconds = ttlSeconds,
+    }),
   ... other forwarded tag name and value pairs
 }
 ```
