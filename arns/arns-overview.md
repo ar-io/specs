@@ -10,6 +10,7 @@
 | ------- | ------------------------------------------------------------------- | ---------- |
 | 1.0.0   | Initial version of the Arweave Name System Specifications overview. | 2024-09-01 |
 | 1.0.1   | Updated reference implementation links                              | 2024-09-24 |
+| 1.0.2   | Added priority field for undernames and AR.IO Network integration. | 2025-07-29 |
 
 ## Abstract
 
@@ -70,12 +71,14 @@ Arweave Name Tokens (ANTs) are specialized AO Processes that manage the ownershi
 
 - **Process Control**: Each registered ArNS name points to the Process ID of an ANT. The owner of this ANT controls how the ArNS name functions. ANT owners can upgrade their processes as needed, or they can set the process Owner to null, rendering the process code immutable.
 - **Resolution**: AR.IO Gateways and other ArNS Resolvers read the state from these registered ANTs to properly resolve and serve the data they reference.
+- **AR.IO Network Integration**: ANTs include handlers to interact directly with the AR.IO Network Process, enabling owners to release names back to the registry, reassign names to other ANTs, and manage primary name associations.
 
 ### Undernames
 
 Undernames allow Arweave Name owners to create multiple subdomains for a registered ArNS name, providing flexibility and extended functionality.
 
 - **Naming Conventions**: These are configured using underscores (`_`) instead of dots (`.`), emphasizing the hierarchical relationship directly controlled by the primary name owner—ensuring that `dapp_ardrive` is unmistakably tied to `ardrive`. Unlike traditional DNS, names resembling undernames cannot be registered independently within ArNS, avoiding potential confusion and spoofing.
+- **Priority Sorting**: Undernames can be assigned priority values to determine their sort order when served by gateways, helping owners organize and prioritize their subdomains effectively.
 
 ### Name Resolution
 
