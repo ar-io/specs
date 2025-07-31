@@ -11,6 +11,7 @@
 | 1.0.0   | Initial version of the **ARNS-TOKEN-1** specification.    | 2024-09-01 |
 | 1.0.1   | Fixed Credit/Debit response notices for Transfer handler. | 2024-09-24 |
 | 1.1.0   | Added 'description' and 'keywords' metadata.              | 2024-10-14 |
+| 1.2.0   | Added Set-Logo to action map, fixed Set-Keywords examples, and documented ANT Registry callback. | 2025-07-29 |
 
 ## Abstract
 
@@ -144,8 +145,9 @@ ARNSTokenSpecActionMap = {
   -- write
   SetName = "Set-Name",
   SetTicker = "Set-Ticker",
-  SetDescription = "Set-Description"
-  SetKeywords = "Set-Keywords"
+  SetDescription = "Set-Description",
+  SetKeywords = "Set-Keywords",
+  SetLogo = "Set-Logo"
 }
 
 TokenSpecActionMap = {
@@ -384,8 +386,8 @@ Executable by the process `Owner` or an authorized user in the `Controllers` tab
 ```
 Send({
   Target = "{Process Identifier}",
-  Action = "Set-Description",
-  Description = "ArDrive is an app that makes it easy to upload, download and share your public or private files on Arweave"
+  Action = "Set-Keywords",
+  Keywords = json.encode(["file-sharing", "storage", "permaweb", "arweave"])
 })
 ```
 
@@ -396,9 +398,9 @@ Send({
 ```
 {
   Target = msg.From,
-  Action = "Invalid-Set-Description-Notice",
+  Action = "Invalid-Set-Keywords-Notice",
   Data = permissionErr,
-  Error = "Set-Description-Error",
+  Error = "Set-Keywords-Error",
   ["Message-Id"] = msg.Id
 }
 ```
@@ -408,9 +410,9 @@ Send({
 ```
 {
   Target = msg.From,
-  Action = "Invalid-Set-Description-Notice",
-  Data = descriptionRes,
-  Error = "Set-Description-Error",
+  Action = "Invalid-Set-Keywords-Notice",
+  Data = keywordsRes,
+  Error = "Set-Keywords-Error",
   ["Message-Id"] = msg.Id,
 }
 ```
@@ -420,8 +422,73 @@ Send({
 ```
 {
   Target = msg.From,
-  Action = "Set-Description-Notice",
-  Data = json.encode({ Description = Description }),
+  Action = "Set-Keywords-Notice",
+  Data = json.encode({ Keywords = Keywords }),
+  ... other forwarded tag name and value pairs
+}
+```
+
+#### Set-Logo
+
+Updates the `Logo` transaction ID for this ANT.
+
+Executable by the process `Owner` or an authorized user in the `Controllers` table.
+
+##### Parameters
+
+| Name | Type   | Description                    |
+| ---- | ------ | ------------------------------ |
+| Logo | string | The new Logo transaction ID for the ANT. |
+
+##### Rules
+
+- Must be an authorized process `Owner` or `Controller`.
+- Must specify a valid `Logo` parameter (Arweave transaction ID) as a message tag.
+- Should add `X-`forwarded tags to the response notice.
+
+##### Action
+
+```
+Send({
+  Target = "{Process Identifier}",
+  Action = "Set-Logo",
+  Logo = "KKmRbIfrc7wiLcG0zvY1etlO0NBx1926dSCksxCIN3A"
+})
+```
+
+##### Responses
+
+**Permission error, not authorized**
+
+```
+{
+  Target = msg.From,
+  Action = "Invalid-Set-Logo-Notice",
+  Data = permissionErr,
+  Error = "Set-Logo-Error",
+  ["Message-Id"] = msg.Id
+}
+```
+
+**Invalid parameters**
+
+```
+{
+  Target = msg.From,
+  Action = "Invalid-Set-Logo-Notice",
+  Data = logoRes,
+  Error = "Set-Logo-Error",
+  ["Message-Id"] = msg.Id,
+}
+```
+
+**Valid parameters**
+
+```
+{
+  Target = msg.From,
+  Action = "Set-Logo-Notice",
+  Data = json.encode({ Logo = Logo }),
   ... other forwarded tag name and value pairs
 }
 ```
