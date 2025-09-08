@@ -432,7 +432,6 @@ No parameters necessary.
   - Entire `Records` table.
   - Entire `Controllers` table.
   - Process `Owner`.
-  - `Initialized` boolean flag.
 - Must add `X-`forwarded tags to the response notice.
 
 ##### Action
