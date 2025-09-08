@@ -9,7 +9,7 @@
 | Version | Description                                           | Date       |
 | ------- | ----------------------------------------------------- | ---------- |
 | 1.0.0   | Initial version of the **ARNS-CORE-1** specification. | 2024-09-01 |
-| 1.0.1   | Added priority field to Records object.               | 2025-07-29 |
+| 1.1.0   | Added priority field to Records object.               | 2025-07-29 |
 
 ## Abstract
 
