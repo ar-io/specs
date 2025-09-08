@@ -455,7 +455,6 @@ Send({
     Records = Records,
     Controllers = Controllers,
     Owner = ao.env.Process.Owner,
-    Initialized = Initialized,
   }),
   ... other forwarded tag name and value pairs
 }
