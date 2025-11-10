@@ -12,6 +12,7 @@
 | 1.0.1   | Fixed Credit/Debit response notices for Transfer handler. | 2024-09-24 |
 | 1.1.0   | Added 'description' and 'keywords' metadata.              | 2024-10-14 |
 | 1.2.0   | Added Set-Logo to action map, fixed Set-Keywords examples, and documented ANT Registry callback. | 2025-07-29 |
+| 1.3.0   | Added record ownership and metadata fields for undernames. | 2025-08-01 |
 
 ## Abstract
 
@@ -112,7 +113,14 @@ Controllers = Controllers or { Owner }
 Records = Records or {
   ["@"] = {
     transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
-    ttlSeconds = 3600
+    ttlSeconds = 3600,
+    priority = 0,
+    -- Optional ownership and metadata fields
+    owner = nil,         -- Record owner address (optional)
+    displayName = nil,   -- Display name (max 61 chars, optional)
+    logo = nil,          -- Arweave TX ID for logo (optional)
+    description = nil,   -- Description (max 512 chars, optional)
+    keywords = nil       -- Array of keywords; up to 16, each max 32 chars (optional)
   }
 }
 ```
@@ -719,7 +727,7 @@ No parameters necessary.
 ##### Rules
 
 - Must return the full state of the process as encoded JSON in the data field of the response notice. State information must include:
-  - Entire `Records` table
+  - Entire `Records` table (including optional record ownership and metadata fields: `owner`, `displayName`, `logo`, `description`, `keywords`)
   - Entire `Controllers` table
   - Entire `Balances` table
   - Process `Owner`
