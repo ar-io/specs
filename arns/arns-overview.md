@@ -11,6 +11,7 @@
 | 1.0.0   | Initial version of the Arweave Name System Specifications overview. | 2024-09-01 |
 | 1.0.1   | Updated reference implementation links                              | 2024-09-24 |
 | 1.0.2   | Added priority field for undernames and AR.IO Network integration. | 2025-07-29 |
+| 1.0.3   | Added undername ownership and delegated control features.           | 2025-08-01 |
 
 ## Abstract
 
@@ -79,6 +80,7 @@ Undernames allow Arweave Name owners to create multiple subdomains for a registe
 
 - **Naming Conventions**: These are configured using underscores (`_`) instead of dots (`.`), emphasizing the hierarchical relationship directly controlled by the primary name owner—ensuring that `dapp_ardrive` is unmistakably tied to `ardrive`. Unlike traditional DNS, names resembling undernames cannot be registered independently within ArNS, avoiding potential confusion and spoofing.
 - **Priority Sorting**: Undernames can be assigned priority values to determine their sort order when served by gateways, helping owners organize and prioritize their subdomains effectively.
+- **Delegated Ownership**: ANT owners can delegate control of specific undernames to other users through record ownership. Record owners can manage their undername's transaction ID, TTL, metadata (display name, logo, description, keywords), and use it as a primary ArNS identity. The ANT owner retains ultimate authority over all records. This enables use cases like community management, marketplaces, and distributed collaboration.
 
 ### Name Resolution
 
