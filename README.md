@@ -1,10 +1,10 @@
 # AR.IO Network Specifications
 
-Welcome to the AR.IO Network Specifications repository! This repository contains the official specifications for building on the AR.IO Network, a decentralized gateway network for interacting with Arweave. These specifications are designed to create a unified, interoperable, and resilient ecosystem of tools and applications built that leverage the various protocols and services offered by the AR.IO Network.
+Welcome to the AR.IO Network Specifications repository! This repository contains the official specifications for building on the AR.IO Network, a decentralized gateway network for accessing Arweave and other decentralized storage protocols. These specifications are designed to create a unified, interoperable, and resilient ecosystem of tools and applications that leverage the various protocols and services offered by the AR.IO Network.
 
 ## Overview
 
-The AR.IO Network Specifications cover a range of critical functionality, from the Arweave Name System (ArNS) to routing and path manifest handling. By adhering to these specs, developers can build reliable, scalable applications that integrate seamlessly with the AR.IO Gateway network and the broader Arweave ecosystem.
+The AR.IO Network Specifications cover a range of critical functionality, from the AR.IO Name System (ArNS) to path manifest handling. By adhering to these specs, developers can build reliable, scalable applications that integrate seamlessly with the AR.IO Gateway network and the broader permaweb ecosystem.
 
 ### Why Specifications Matter
 
@@ -16,19 +16,25 @@ Specifications provide the foundational structure for the AR.IO Network. They en
 
 ## Specifications
 
-### Arweave Name System (ArNS)
+### AR.IO Name System (ArNS)
 
-- **ARNS-CORE**: Core specification for resolving Arweave Names to transaction IDs.
-- **ARNS-MANAGE**: Control and management features for Arweave Names.
-- **ARNS-TOKEN**: Adds token functionality, including transferability and metadata.
+The ArNS specs define how human-readable names map to content across Arweave, IPFS, and future storage protocols. The reference implementation is a set of Solana programs (`ario-arns`, `ario-ant`, `ario-core`); AR.IO Name Tokens (ANTs) are Metaplex Core NFTs. Start with the overview if you're new to the system.
 
-### Routing and URI Handling
-
-- **ARNS-ROUTING**: Defines the AR.IO Wayfinder Protocol for routing to Arweave Names and content.
+- **[ARNS-OVERVIEW](./arns/arns-overview.md)**: Umbrella reference — system architecture, name lifecycle, primary names, name validation, program IDs lookup, account serialization, and event surface.
+- **[ARNS-CORE-1](./arns/arns-core-1.md)**: Record format and read interface for resolving names to multi-protocol content addresses (Arweave TX IDs, IPFS CIDs).
+- **[ARNS-MANAGE-1](./arns/arns-manage-1.md)**: Record creation, controller delegation, record-level ownership, and AR.IO Network integration (release, reassign, primary names).
+- **[ARNS-TOKEN-1](./arns/arns-token-1.md)**: AR.IO Name Tokens as Metaplex Core NFTs with on-chain configuration, controllers, and undername records.
+- **[ARNS-RESOLVER-1](./arns/arns-resolver-1.md)**: Resolver/gateway protocol — direct on-chain reads, multi-protocol routing, URI schemes (`ar://`, `ipfs://`), response headers, caching, and observation compliance.
 
 ### Path Manifest Specification
 
-- **PATH-MANIFEST-SCHEMA**: JSON-based schema for mapping paths to content within Arweave.
+- **[PATH-MANIFEST-SCHEMA](./manifests/path-manifest-schema.md)**: JSON-based schema for mapping paths to content within Arweave.
+
+### Reference Implementations
+
+- [`ar-io-solana-contracts`](https://github.com/ar-io/ar-io-solana-contracts) — the four Solana programs (`ario-core`, `ario-gar`, `ario-arns`, `ario-ant`) that back the ArNS specs. The published Anchor IDLs are the authoritative source for program IDs, account layouts, instruction signatures, and event schemas.
+- [`@ar.io/sdk`](https://github.com/ar-io/ar-io-sdk) — TypeScript SDK with kit-native Solana transport and (legacy) AO support. Exports `ARIO_*_PROGRAM_ID` constants mirroring the IDLs.
+- [`ar-io-node`](https://github.com/ar-io/ar-io-node) — reference AR.IO Gateway implementation; ships with an ArNS resolver per ARNS-RESOLVER-1.
 
 ## Specification Principles and Practices
 
@@ -62,7 +68,7 @@ For example:
 
 We welcome contributions! Here’s how you can get involved:
 
-- **Review Existing Specs**: Explore the /specs folder to get familiar with the structure.
+- **Review Existing Specs**: Explore the `arns/` and `manifests/` folders to get familiar with the structure.
 - **Open Issues**: If you spot inconsistencies or have suggestions, open an issue here.
 - **Submit a Pull Request**: Fork the repo, create a branch, and submit a pull request. Ensure your changes follow the principles outlined above.
 
