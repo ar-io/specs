@@ -2,7 +2,7 @@
 
 ## Status:
 
-**In-Review**
+**Draft**
 
 ## Version:
 
@@ -11,876 +11,530 @@
 | 1.0.0   | Initial version of the **ARNS-MANAGE-1** specification. | 2024-09-01 |
 | 1.1.0   | Added AR.IO Network handlers, Priority parameter for Set-Record, Initialized field, and boot handler documentation. | 2025-07-29 |
 | 1.2.0   | Added undername ownership with Transfer-Record handler, record metadata fields, and delegated permission model for record owners. | 2025-08-01 |
+| 2.0.0   | Rewritten for Solana. ANTs are Metaplex Core NFTs. Owner = NFT holder. Controllers stored in on-chain PDA. Record owner delegation model. AR.IO Network integration instructions moved to ario-arns / ario-core programs. Boot handler removed. | 2026-04-20 |
+| 2.1.0   | Pluggable ANT program: management instructions live on the program named in the asset's `ANT Program` Attributes-plugin entry. Conformance is on the third-party program. | 2026-05-03 |
+| 2.1.1   | Audit corrections: ADR-016 authorization model for registry-side instructions (caller matches stored `owner`, not current NFT holder), `AntRecordMetadata` PDA split, description max 256, keywords max 8, `reassign_name` parameter clarification. | 2026-05-11 |
+| 2.1.2   | Documented full primary-name flow (`request_primary_name`, `remove_primary_name`); added Primary Names concept section and PDA seeds. | 2026-05-11 |
 
 ## Abstract
 
-The **ARNS-MANAGE-1** specification introduces additional management and control utilities for Arweave Names. It provides the necessary handlers for adding, modifying, and removing records, as well as managing controllers who can add, set or remove these records. Additionally, it supports delegated ownership of individual undernames, enabling record-level control while maintaining ANT owner authority.
+The **ARNS-MANAGE-1** specification defines the management and control operations for AR.IO Name Tokens (ANTs). It covers undername record creation, modification, and removal; controller delegation for shared record management; and integration with the AR.IO Network for name release, reassignment, and primary name operations.
+
+On Solana, each ANT is a Metaplex Core NFT. Ownership is determined by who holds the NFT -- there is no stored `Owner` variable. Extended state (configuration, controllers, records) is stored in Program Derived Accounts (PDAs) keyed to the NFT mint address.
+
+The program that owns these PDAs is declared per-asset in the Metaplex Core Attributes plugin under the `ANT Program` key (set at `CreateV1` time by the SDK and migration mint paths). Implementations of this specification SHOULD treat that key as the routing target: derive every management PDA against it and, on absence, fall back to the canonical `ARIO_ANT_PROGRAM_ID`. Third-party programs that wish to plug into the AR.IO Name System MUST conform to the management instruction surface defined here AND mint their assets with `ANT Program: <their_program_id>` in the Attributes plugin so resolvers can route correctly. See ADR-016 / BD-100 for the full design.
 
 ## Motivation
 
-The **ARNS-MANAGE-1** specification builds on the foundational **ARNS-CORE-1** by adding essential management capabilities. As Arweave Names require ongoing updates and adjustments, this specification ensures that process owners have the tools needed to manage records and delegate control to other users securely. This includes the ability to assign ownership of individual undernames to specific users while maintaining the ANT owner's ultimate authority. By standardizing these management operations, **ARNS-MANAGE-1** enables efficient and consistent name management across the Arweave ecosystem.
-
-#### Language of Implementation
-
-All examples and code snippets in this specification are written in Lua. This choice ensures compatibility with the AO Processes and the Arweave ecosystem.
-
-However, developers are not restricted to using Lua exclusively when building new features or extending functionalities around ArNS. While Lua is recommended for direct integration with existing infrastructure, other programming languages can be used, provided they adhere to the protocols and specifications outlined in this document.
+The **ARNS-MANAGE-1** specification builds on **ARNS-CORE-1** by adding the management capabilities required for ongoing name administration. AR.IO Names require updates over time -- pointing records at new content, delegating control to collaborators, and managing network-level name operations. This specification standardizes these operations so that ANT owners have a consistent interface for record and controller management across the AR.IO ecosystem.
 
 ## Specification
 
 ### Overview
 
-The **ARNS-MANAGE-1** Specification includes the following requirements:
+The **ARNS-MANAGE-1** specification requires the following capabilities:
 
-- Must include a list of `Controllers` who act as secondary users who control the `Records` set in this ANT.
-- Must have an `Add-Controller` handler to add new `Controllers`.
-  - Authorized for the Process `Owner` only.
-- Must have a `Remove-Controller` handler to remove `Controllers`.
-  - Authorized for the Process `Owner` only.
-- Must have a `Set-Record` handler to set new `Records` and modify existing ones.
-  - Authorized for the Process `Owner`, `Controllers`, and individual record owners (for their own records).
-  - Supports optional `Priority` parameter for undername sorting.
-  - Supports optional record ownership and metadata fields: `Record-Owner`, `Display-Name`, `Logo`, `Description`, and `Keywords`.
-  - Priority and explicit owner assignment require ANT owner or controller authorization.
-- Must have a `Transfer-Record` handler to transfer ownership of a specific undername.
-  - Authorized for the Process `Owner`, `Controllers`, and the current record owner.
-- Must have a `Remove-Record` handler to remove `Records`.
-  - Authorized for the Process `Owner` and `Controllers`.
-- Must have a handler to read all `Controllers`.
-- Handler to read entire ANT `State` is updated to also return `Controllers`.
-- Must have AR.IO Network integration handlers:
-  - Authorized for the Process `Owner` only.
-    - `Release-Name` to release an ArNS name back to the registry.
-    - `Reassign-Name` to transfer an ArNS name to another ANT.
-  - Authorized for the Process `Owner` or the undername owner if the undername has one.
-    - `Approve-Primary-Name` to approve primary name requests.
-    - `Remove-Primary-Names` to remove primary name associations.
-  
+**Controller Management:**
 
-This adds flexibility for Arweave Name Process Owners to manage their records, leverage controllers for access controls, delegate undername ownership, and interact with the AR.IO Network for name management.
+- Must maintain a list of `Controllers` -- addresses authorized to manage records on behalf of the NFT holder.
+- Must have an `add_controller` instruction to add new controllers.
+  - Authorized for the NFT holder or existing controllers only.
+  - Maximum 10 controllers per ANT.
+- Must have a `remove_controller` instruction to remove controllers.
+  - Authorized for the NFT holder or existing controllers only.
+- Controllers must be automatically cleared when the NFT is transferred to a new holder (lazy reconciliation).
+
+**Record Management:**
+
+- Must have a `set_record` instruction to create new records and update existing ones.
+  - New records: authorized for the NFT holder and controllers only.
+  - Existing records: authorized for the NFT holder, controllers, or the record's delegated owner.
+  - Supports `target` (content address), `target_protocol` (storage protocol identifier), `ttl_seconds`, `priority`, and optional metadata fields.
+  - Supports optional per-record owner delegation.
+- Must have a `remove_record` instruction to remove records.
+  - Authorized for the NFT holder and controllers only.
+  - The root `@` record cannot be removed.
+- Must have a `transfer_record` instruction to transfer delegated ownership of a record.
+  - Authorized for the NFT holder, controllers, or the current record owner.
+
+**Read Operations:**
+
+- Must support reading the controller list.
+- The State read operation (from ARNS-CORE-1) is extended to include the controller list.
+
+**AR.IO Network Integration:**
+
+The following operations interact with the AR.IO Network programs (ario-arns and ario-core), not the ANT program itself. Authorization for name-owner operations is by the stored `owner` field on the relevant on-chain record (set at name purchase or record delegation), not by current Metaplex Core NFT possession -- see [Registry-Side Authorization](#registry-side-authorization) below.
+
+- `release_name` -- releases an ArNS name back to the registry (on ario-arns program).
+- `reassign_name` -- reassigns an ArNS name to a different ANT (on ario-arns program).
+- `request_primary_name` -- requests that an ArNS name become the caller's primary identity (on ario-core program).
+- `approve_primary_name` -- approves a pending primary name request (on ario-core program).
+- `remove_primary_name` -- the bound wallet removes its own primary-name binding (on ario-core program).
+- `remove_primary_name_for_base_name` -- the name owner revokes a primary-name binding using their name (on ario-core program).
+
+### Ownership Model
+
+Ownership of an ANT is determined solely by who holds the Metaplex Core NFT. There is no stored owner field that can be set independently of NFT possession.
+
+**Lazy ownership reconciliation:** The `AntConfig` account stores a `last_known_owner` field. On every write operation, the program reads the current NFT holder from the Metaplex Core asset account. If the holder differs from `last_known_owner`, the controller list is cleared and `last_known_owner` is updated. This ensures that transferring the NFT via any Metaplex-compatible marketplace or wallet automatically revokes all controller access without requiring a separate transaction.
+
+A permissionless `reconcile` instruction is also available to explicitly trigger reconciliation (e.g., immediately after a marketplace transfer) without performing any other operation.
 
 ### Objects
 
-The **ARNS-MANAGE-1** specification includes all of the objects contained in **ARNS-CORE-1**.
+The **ARNS-MANAGE-1** specification includes all objects from **ARNS-CORE-1**, plus the following:
 
-#### ARNS-MANAGE-1 Objects
+#### AntControllers
 
-```
--- ARNS-MANAGE-1 Objects
-Owner = Owner or ao.env.Process.Owner
-Controllers = Controllers or { Owner }
-Initialized = Initialized or false
+Stores the controller list for an ANT. Derived as a PDA with seeds `["ant_controllers", mint]`.
 
--- ARNS-CORE-1 Objects
-Records = Records or {
-  ["@"] = {
-    transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
-    ttlSeconds = 3600,
-    priority = 0,
-    -- Optional ownership and metadata fields
-    owner = nil,         -- Record owner address (optional)
-    displayName = nil,   -- Display name (max 61 chars, optional)
-    logo = nil,          -- Arweave TX ID for logo (optional)
-    description = nil,   -- Description (max 512 chars, optional)
-    keywords = nil       -- Array of keywords; up to 16, each max 32 chars (optional)
-  }
-}
-```
+| Field       | Type      | Description                                        |
+| ----------- | --------- | -------------------------------------------------- |
+| mint        | PublicKey | The Metaplex Core asset (NFT mint) this belongs to |
+| controllers | PublicKey[] | Controller addresses (max 10)                    |
+| bump        | u8        | PDA bump seed                                      |
 
-### Handlers
+#### AntRecord (extended from ARNS-CORE-1)
 
-#### Action Map
+Each undername record is stored as two PDAs: a required `AntRecord` (resolution-critical fields) and an optional `AntRecordMetadata` (descriptive fields). The metadata account is created lazily when an optional field is first written.
 
-The following actions are handled in the **ARNS-MANAGE-1** specification and include the actions contained in **ARNS-CORE-1**.
+PDA seeds: `["ant_record", mint, hash(undername.lowercase())]`
 
-```
-ARNSCoreSpecActionMap = {
-  -- read actions
-  Record = "Record",
-  Records = "Records",
-  State = "State",
-}
+| Field                 | Type            | Description                                                              |
+| --------------------- | --------------- | ------------------------------------------------------------------------ |
+| mint                  | PublicKey       | The Metaplex Core asset this record belongs to                           |
+| undername             | String          | The undername (e.g. `@`, `blog`, `docs`) -- lowercase, max 61 chars      |
+| target                | String          | Content address -- Arweave TX ID (43 chars), IPFS CID, or future protocol. Max 128 chars |
+| target_protocol       | u8              | Storage protocol: `0` = Arweave (default), `1` = IPFS.                                  |
+| ttl_seconds           | u32             | Cache TTL in seconds (60 -- 86400)                                        |
+| priority              | Option\<u32\>   | Sort priority for undername resolution. Must be `0` (or unset) for `@`. Non-`@` records accept any non-negative value. Unset records sort lexicographically |
+| owner                 | Option\<PublicKey\> | Delegated record owner. When set, this address can update content fields (target, ttl, metadata) but cannot change priority or record ownership |
+| last_reconciled_owner | PublicKey       | ANT owner at last record modification -- used to detect stale record owners after NFT transfer |
+| bump                  | u8              | PDA bump seed                                                            |
+| version               | u8              | Schema version for per-record migrations                                 |
 
-ARNSManageSpecActionMap = {
-  -- read actions
-  Controllers = "Controllers",
-  -- write actions
-  AddController = "Add-Controller",
-  RemoveController = "Remove-Controller",
-  SetRecord = "Set-Record",
-  TransferRecord = "Transfer-Record"
-  RemoveRecord = "Remove-Record",
-  -- AR.IO Network integration
-  ReleaseName = "Release-Name",
-  ReassignName = "Reassign-Name",
-  ApprovePrimaryName = "Approve-Primary-Name",
-  RemovePrimaryNames = "Remove-Primary-Names",
-}
-```
+#### AntRecordMetadata
 
-#### Controllers
+PDA seeds: `["ant_record_meta", mint, hash(undername.lowercase())]`
 
-Gets the entire `Controllers` table, including each wallet that has controller permission on this process.
+| Field              | Type                | Description                                            |
+| ------------------ | ------------------- | ------------------------------------------------------ |
+| mint               | PublicKey           | The Metaplex Core asset this metadata belongs to       |
+| display_name       | Option\<String\>    | Optional display name (max 61 chars)                   |
+| record_logo        | Option\<String\>    | Optional logo (Arweave TX ID, 43 chars)                |
+| record_description | Option\<String\>    | Optional description (max 256 chars)                   |
+| record_keywords    | Option\<String[]\>  | Optional keywords (max 8, each max 32 chars)           |
+| bump               | u8                  | PDA bump seed                                          |
+| version            | u8                  | Schema version for per-record-metadata migrations      |
 
-Executable by anonymous users.
+### Instructions
 
-##### Parameters
+#### Instruction Summary
 
-No parameters needed.
+The following instructions are defined by the **ARNS-MANAGE-1** specification, in addition to the read instructions from **ARNS-CORE-1**.
 
-##### Rules
+| Instruction               | Program    | Authorization                          |
+| ------------------------- | ---------- | -------------------------------------- |
+| `add_controller`          | ario-ant   | NFT holder or controller               |
+| `remove_controller`       | ario-ant   | NFT holder or controller               |
+| `set_record`              | ario-ant   | NFT holder, controller, or record owner (limited) |
+| `remove_record`           | ario-ant   | NFT holder or controller               |
+| `transfer_record`         | ario-ant   | NFT holder, controller, or record owner |
+| `reconcile`               | ario-ant   | Permissionless                         |
+| `release_name`            | ario-arns  | `ArnsRecord.owner`                     |
+| `reassign_name`           | ario-arns  | `ArnsRecord.owner`                     |
+| `request_primary_name`    | ario-core  | Requestor (signs and pays the fee)     |
+| `approve_primary_name`    | ario-core  | `AntRecord.owner` (requested undername)|
+| `remove_primary_name`     | ario-core  | Owner of the primary-name binding      |
+| `remove_primary_name_for_base_name` | ario-core | `AntRecord.owner` (`@` undername) |
 
-- Must return entire `Controllers` object as JSON in the data field of the response notice.
-- Must add `X-`forwarded tags to the response notice.
+---
 
-##### Action
+#### add_controller
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Controllers"
-})
-```
+Adds an address to the controller list, granting it permission to manage records for this ANT.
 
-##### Responses
-
-**Valid `Controllers`**
-
-```
-{
-  Target = msg.From,
-  Action = "Controllers-Notice",
-  Data = json.encode(Controllers),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Add-Controller
-
-Adds a new controller into the `Controllers` table, giving them access to modify the Arweave Name's `Records`.
-
-Executable by the process `Owner` or an authorized user in the `Controllers` table.
+**Authorization:** NFT holder or existing controller.
 
 ##### Parameters
 
-| Name       | Type   | Description                                                                                            |
-| ---------- | ------ | ------------------------------------------------------------------------------------------------------ |
-| Controller | string | The controller being added to the Controllers table, e.g., iKryOeZQMONi2965nKz528htMMN_sBcjlhc-VncoRjA |
+| Name       | Type      | Description                                  |
+| ---------- | --------- | -------------------------------------------- |
+| controller | PublicKey | The address to add as a controller           |
 
 ##### Rules
 
-- Must be an authorized process `Owner` or `Controller`.
-- Must specify a valid `Controller` parameter (string) as a message tag.
-- The `Controller` must not already exist in the `Controllers` table.
-- Must add `X-`forwarded tags to the response notice.
+- Caller must be the NFT holder or an existing controller (after lazy reconciliation).
+- The `controller` address must not already exist in the controller list.
+- The controller list must not exceed 10 entries.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Add-Controller",
-  Controller = "{Wallet Address}"
-})
-```
+| Error                    | Condition                                  |
+| ------------------------ | ------------------------------------------ |
+| Unauthorized             | Caller is not the NFT holder or controller |
+| ControllerAlreadyExists  | Address is already a controller            |
+| MaxControllersReached    | Controller list already has 10 entries     |
 
-##### Responses
+---
 
-**Permission error, not authorized**
+#### remove_controller
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Add-Controller-Notice",
-  Error = "Add-Controller-Error",
-  ["Message-Id"] = msg.Id,
-  Data = permissionErr
-}
-```
+Removes an address from the controller list.
 
-**Invalid `Controller`**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Add-Controller-Notice",
-  Error = "Add-Controller-Error",
-  ["Message-Id"] = msg.Id,
-  Data = controllerRes
-}
-```
-
-**Valid `Controller`**
-
-```
-{
-  Target = msg.From,
-  Action = "Add-Controller-Notice",
-  Data = json.encode(Controllers),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Remove-Controller
-
-Removes an existing controller in the `Controllers` table, removing their access to modify the Arweave Name's `Records.
-
-Executable by the process `Owner` or an authorized user in the `Controllers` table.
+**Authorization:** NFT holder or existing controller.
 
 ##### Parameters
 
-| Name       | Type   | Description                                                                                                           |
-| ---------- | ------ | --------------------------------------------------------------------------------------------------------------------- |
-| Controller | string | The controller wallet address to remove from the Controllers table, e.g., iKryOeZQMONi2965nKz528htMMN_sBcjlhc-VncoRjA |
+| Name       | Type      | Description                                  |
+| ---------- | --------- | -------------------------------------------- |
+| controller | PublicKey | The controller address to remove             |
 
 ##### Rules
 
-- Must be an authorized process `Owner` or `Controller`.
-- Must specify a valid `Controller` parameter (string) as a message tag.
-- The `Controller` must already exist in the `Controllers` table.
-- Must add `X-`forwarded tags to the response notice.
+- Caller must be the NFT holder or an existing controller (after lazy reconciliation).
+- The `controller` address must exist in the controller list.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Remove-Controller",
-  Controller = "{Wallet Address}"
-})
-```
+| Error              | Condition                                  |
+| ------------------ | ------------------------------------------ |
+| Unauthorized       | Caller is not the NFT holder or controller |
+| ControllerNotFound | Address is not in the controller list      |
 
-##### Responses
+---
 
-**Permission error, not authorized**
+#### set_record
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Remove-Controller-Notice",
-  Error = "Remove-Controller-Error",
-  ["Message-Id"] = msg.Id,
-  Data = permissionErr,
-}
-```
+Creates a new undername record or updates an existing one. This is the primary instruction for managing what content an AR.IO Name points to.
 
-**Invalid `Controller`**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Remove-Controller-Notice",
-  Error = "Remove-Controller-Error",
-  ["Message-Id"] = msg.Id,
-  Data = removeRes,
-}
-```
-
-**Valid `Controller`**
-
-```
-{
-  Target = msg.From,
-  Action = "Remove-Controller-Notice",
-  Data = json.encode(Controllers),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Set-Record
-
-Updates an existing undername's Sub-Domain in the Records table, including modifying the transaction id, time to live, ownership, and optional metadata.
-
-Executable by the process Owner, an authorized user in the Controllers table, or the record owner (for their own record).
+**Authorization:**
+- Creating a new record: NFT holder or controller only.
+- Updating an existing record: NFT holder, controller, or the record's delegated owner.
+- Record owners can update `target`, `ttl_seconds`, and metadata fields, but cannot change `priority` or `record_owner`.
 
 ##### Parameters
 
-| Name                   | Type   | Description                                                                                 |
-| ---------------------- | ------ | ------------------------------------------------------------------------------------------- |
-| Sub-Domain             | string | The undername record to update, e.g., `@`, `ardrive`, or `dapp_ardrive`                     |
-| Transaction-Id         | string | The Arweave transaction ID that this undername points to.                                   |
-| TTL-Seconds            | string | The time to live for this record, indicating how long an ArNS Resolver should cache it for. |
-| Priority               | string | Optional. The priority for ArNS resolution of undernames. Must be integer > 0 (or 0 for `@`). Only settable by ANT owner/controllers. |
-| Record-Owner           | string | Optional. The address to assign as the owner of this record. Only settable by ANT owner/controllers. |
-| Display-Name           | string | Optional. A display name for this undername (max 61 characters). |
-| Logo                   | string | Optional. An Arweave transaction ID for the logo image. |
-| Description            | string | Optional. A description of this undername (max 512 characters). |
-| Keywords               | string | Optional. A JSON-encoded array of keywords (max 16 keywords, each max 32 characters). |
-| Allow-Unsafe-Addresses | string | Optional. If set to `true`, allows setting addresses that may not be valid AO addresses.    |
+| Name               | Type              | Description                                                                                   |
+| ------------------ | ----------------- | --------------------------------------------------------------------------------------------- |
+| undername           | String            | The undername to set (e.g. `@`, `blog`, `dapp_ardrive`). Lowercased before storage. Max 61 chars. Must start with alphanumeric (or be exactly `@`) |
+| target              | String            | Content address. For Arweave (protocol 0): a 43-character base64url TX ID. For IPFS (protocol 1): a CIDv0 (`Qm...`, 46 chars) or CIDv1 (multibase-prefixed) string. Max 128 chars. |
+| target_protocol     | u8                | Storage protocol: `0` = Arweave, `1` = IPFS, `2+` = reserved for future protocols.           |
+| ttl_seconds         | u32               | Cache TTL in seconds. Must be between 60 and 86400 (1 minute to 1 day)                       |
+| priority            | Option\<u32\>     | Optional sort priority. For `@` records, must be `0` or unset. Only NFT holder / controllers can set this |
+| record_owner        | Option\<PublicKey\> | Optional delegated owner address. Only NFT holder / controllers can set or clear this         |
+| display_name        | Option\<String\>  | Optional display name for this record (max 61 chars)                                          |
+| record_logo         | Option\<String\>  | Optional logo (Arweave TX ID, 43 chars)                                                       |
+| record_description  | Option\<String\>  | Optional description (max 256 chars)                                                          |
+| record_keywords     | Option\<String[]\> | Optional keywords (max 8 keywords, each max 32 chars, no duplicates)                          |
 
 ##### Rules
 
-- Must be an authorized process `Owner`, `Controller`, or the record owner (for existing records they own).
-- New records can only be created by the ANT owner or controllers.
-- Must specify a valid `Sub-Domain` parameter (string) as a message tag.
-- Must specify a valid `Transaction-Id` parameter (string) as a message tag.
-- Must specify a valid `TTL-Seconds` parameter (string) as a message tag, which is an integer between 60 and 86400.
-- `Priority` and `Record-Owner` assignment require ANT owner or controller authorization.
-- `Priority` must be an integer greater than 0 for undernames, or exactly 0 for the `@` record.
-- `Display-Name` must not exceed 61 characters.
-- `Description` must not exceed 512 characters.
-- `Keywords` must be a valid JSON array with up to 16 keywords, each consisting of alphanumeric characters, dashes, underscores, @ or #, and not exceeding 32 characters.
-- Must add `X-`forwarded tags to the response notice.
+- Caller must be authorized (see Authorization above).
+- `undername` must be a valid format: `@`, or starting with an alphanumeric character followed by alphanumeric, dash, or underscore characters.
+- `target` must be a valid content address for the declared `target_protocol` (Arweave: 43 base64url characters; IPFS: CIDv0 `Qm`-prefixed 46-char string OR CIDv1 multibase-prefixed string).
+- `ttl_seconds` must be in range [60, 86400].
+- For `@` records, `priority` must be `0` or unset (it always resolves to `0`).
+- For non-`@` records, if `priority` is provided, the caller must be the NFT holder or a controller.
+- Only the NFT holder or a controller can assign or clear `record_owner`.
+- On NFT transfer (detected via `last_reconciled_owner` mismatch), the record's `owner` field is automatically cleared before permission checks.
+- Keywords must be unique, alphanumeric with dash, underscore, `#`, and `@` allowed, no spaces.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Set-Record",
-  ["Sub-Domain"] = "foo",
-  ["Transaction-Id"] = "{Base64 URL}",
-  ["TTL-Seconds"] = "900",
-  Priority = "10", -- optional, ANT owner/controllers only
-  ["Record-Owner"] = "{Wallet Address}", -- optional, ANT owner/controllers only
-  ["Display-Name"] = "Foo's Site", -- optional
-  Logo = "Sie_26dvgyok0PZD_-iQAFOhOd5YxDTkczOLoqTTL_A", -- optional
-  Description = "This is Foo's personal site", -- optional
-  Keywords = '["personal","blog"]' -- optional, JSON array
-})
-```
+| Error                              | Condition                                                    |
+| ---------------------------------- | ------------------------------------------------------------ |
+| InvalidUndername                   | Undername format is invalid                                  |
+| InvalidTarget                      | Content target is not valid for the declared protocol        |
+| InvalidTtl                         | TTL is outside [60, 86400] range                             |
+| CannotChangePriorityOfRoot         | Attempted to set non-zero priority on `@` record             |
+| PriorityRequiresOwnerOrController  | Record owner tried to change priority                        |
+| OnlyOwnerOrControllerCanCreate     | Record owner or unauthorized user tried to create new record |
+| UnauthorizedRecordAccess           | Caller has no permission for this record                     |
 
-##### Responses
+---
 
-**Permission error, not authorized**
+#### remove_record
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Record-Notice",
-  Data = permissionErr,
-  Error = "Set-Record-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+Removes an undername record, closing its PDA account and returning rent to the caller.
 
-**Invalid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Record-Notice",
-  Data = setRecordResult,
-  Error = "Set-Record-Error",
-  ["Message-Id"] = msg.Id,
-}
-```
-
-**Valid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Set-Record-Notice",
-  Data = json.encode({
-    transactionId = transactionId,
-    ttlSeconds = ttlSeconds,
-    priority = priority,
-    owner = owner, -- if set
-    displayName = displayName, -- if set
-    logo = logo, -- if set
-    description = description, -- if set
-    keywords = keywords, -- if set
-  }),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Transfer-Record
-
-Transfers ownership of a specific undername record to another address.
-
-Executable by the process `Owner`, an authorized user in the `Controllers` table, or the current record owner.
+**Authorization:** NFT holder or controller only.
 
 ##### Parameters
 
-| Name                   | Type   | Description                                                                                                   |
-| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
-| Sub-Domain             | string | The undername record to transfer, e.g., `@`, `ardrive`, or `dapp_ardrive`                                     |
-| Recipient              | string | The wallet address to transfer record ownership to, e.g., iKryOeZQMONi2965nKz528htMMN_sBcjlhc-VncoRjA         |
-| Allow-Unsafe-Addresses | string | Optional. If set to `true`, allows transferring to addresses that may not be valid AO addresses.              |
+No instruction parameters. The record to remove is identified by the PDA derivation (the record account is passed as part of the account context).
 
 ##### Rules
 
-- Must be an authorized process `Owner`, `Controller`, or the current record owner.
-- Must specify a valid `Sub-Domain` parameter (string) as a message tag.
-- Must specify a valid `Recipient` parameter (string) as a message tag.
-- The undername's `Sub-Domain` must already exist in the `Records` table.
-- The record must have an existing owner to be transferable.
-- Must add `X-`forwarded tags to the response notice.
-- Sends an additional `Transfer-Record-Notice` to the new owner.
+- Caller must be the NFT holder or a controller (after lazy reconciliation).
+- The `@` (root) record cannot be removed.
+- The record PDA account is closed and rent is returned to the caller.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Transfer-Record",
-  ["Sub-Domain"] = "foo",
-  Recipient = "{Wallet Address}"
-})
-```
+| Error                  | Condition                                  |
+| ---------------------- | ------------------------------------------ |
+| Unauthorized           | Caller is not the NFT holder or controller |
+| CannotRemoveRootRecord | Attempted to remove the `@` record         |
 
-##### Responses
+---
 
-**Permission error, not authorized**
+#### transfer_record
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Transfer-Record-Notice",
-  Data = permissionErr,
-  Error = "Transfer-Record-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+Transfers delegated ownership of a record to a new address. This changes who the `record_owner` is without modifying the record's content.
 
-**Invalid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Transfer-Record-Notice",
-  Data = transferRecordResult,
-  Error = "Transfer-Record-Error",
-  ["Message-Id"] = msg.Id
-}
-```
-
-**Valid parameters**
-
-```
--- Notice sent to the caller
-{
-  Target = msg.From,
-  Action = "Transfer-Record-Notice",
-  Data = json.encode({
-    ["Sub-Domain"] = subdomain,
-    Recipient = recipient,
-    ["Previous-Owner"] = previousOwner,
-  }),
-  ... other forwarded tag name and value pairs
-}
-
--- Additional notice sent to the new owner
-{
-  Target = recipient,
-  Action = "Transfer-Record-Notice",
-  ["Sub-Domain"] = subdomain,
-  ["Previous-Owner"] = previousOwner,
-  Data = json.encode({
-    ["Sub-Domain"] = subdomain,
-    Recipient = recipient,
-    ["Previous-Owner"] = previousOwner,
-  })
-}
-```
-
-#### Remove-Record
-
-Removes an existing undername’s `Sub-Domain` in the Records table.
+**Authorization:** NFT holder, controller, or the current record owner.
 
 ##### Parameters
 
-| Name       | Type   | Description                                                             |
-| ---------- | ------ | ----------------------------------------------------------------------- |
-| Sub-Domain | string | The undername record to remove, e.g., `@`, `ardrive`, or `dapp_ardrive` |
+| Name      | Type      | Description                                          |
+| --------- | --------- | ---------------------------------------------------- |
+| new_owner | PublicKey | The address to transfer record ownership to          |
 
 ##### Rules
 
-- Must be an authorized process `Owner` or `Controller`.
-- Must specify a valid `Sub-Domain` parameter (string) as a message tag.
-- The undername’s `Sub-Domain` must already exist in the `Records` table.
-- Must add `X-`forwarded tags to the response notice.
+- If the caller is the NFT holder or a controller, they can assign record ownership to any address (even if the record currently has no owner).
+- If the caller is the current record owner (not the NFT holder or controller), they can transfer ownership to a different address.
+- Cannot transfer to the current record owner (no-op prevention).
+- On NFT transfer (detected via `last_reconciled_owner` mismatch), the record's `owner` field is automatically cleared before permission checks.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Remove-Record",
-  ["Sub-Domain"] = "foo"
-})
-```
+| Error                    | Condition                                                 |
+| ------------------------ | --------------------------------------------------------- |
+| Unauthorized             | Caller is not authorized                                  |
+| UnauthorizedRecordAccess | Caller is neither owner/controller nor record owner       |
+| RecordHasNoOwner         | Non-owner/controller caller tried to transfer unowned record |
+| RecordTransferToSelf     | `new_owner` is the same as the current record owner       |
 
-##### Responses
+---
 
-**Permission error, not authorized**
+#### reconcile
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Remove-Record-Notice",
-  Data = permissionErr,
-  Error = "Remove-Record-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+Forces ownership reconciliation. If the NFT has been transferred, this clears all controllers and updates `last_known_owner`. This is useful to call immediately after a marketplace transfer to ensure clean state without waiting for the next write operation.
 
-**Invalid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Remove-Record-Notice",
-  Data = removeRecordResult,
-  Error = "Remove-Record-Error",
-  ["Message-Id"] = msg.Id
-}
-```
-
-**Valid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Remove-Record-Notice",
-  Data = json.encode(Records),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### State
-
-The State handler is updated in **ARNS-MANAGE-1** to return specific information about the state of the process, including all `Records`, its current `Owner`, and all `Controllers`.
-
-Executable by anonymous users.
+**Authorization:** Permissionless -- anyone can trigger reconciliation.
 
 ##### Parameters
 
-No parameters necessary.
+No parameters.
 
 ##### Rules
 
-- Must return a state object as JSON in the data field of the response notice. The state object must include:
-  - Entire `Records` table.
-  - Entire `Controllers` table.
-  - Process `Owner`.
-- Must add `X-`forwarded tags to the response notice.
+- Reads the current NFT holder from the Metaplex Core asset account.
+- If the holder differs from `last_known_owner`, clears all controllers and updates `last_known_owner`.
+- If the holder matches, this is a no-op.
 
-##### Action
+---
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "State"
-})
-```
+### AR.IO Network Integration Instructions
 
-##### Responses
+The following instructions live on the `ario-arns` and `ario-core` programs, not on the ANT program. They are the primary way an ArNS name owner interacts with the AR.IO Name System at the network level.
 
-**Valid `State`**
+#### Registry-Side Authorization
 
-```
-{
-  Target = msg.From,
-  Action = "State-Notice",
-  Data = json.encode({
-    Records = Records,
-    Controllers = Controllers,
-    Owner = ao.env.Process.Owner,
-  }),
-  ... other forwarded tag name and value pairs
-}
-```
+Per ADR-016 / BD-100, `ario-arns` and `ario-core` are MPL-agnostic — they do **not** read the Metaplex Core asset account to verify authorization. Instead, each instruction below requires:
 
-### AR.IO Network Integration Handlers
+- **`release_name`, `reassign_name`** (`ario-arns`): caller must match `ArnsRecord.owner` (set at name purchase via `buy_name` / `buy_returned_name`).
+- **`approve_primary_name`, `remove_primary_name_for_base_name`** (`ario-core`): caller must match `AntRecord.owner` for the relevant undername, read from the program named in the asset's `ANT Program` Attributes-plugin entry (or the canonical `ARIO_ANT_PROGRAM_ID` when absent).
 
-The following handlers enable ANTs to interact with the AR.IO Network Process for managing ArNS name registrations.
+The ANT program (or any pluggable equivalent) is responsible for keeping the on-chain `owner` field in sync with the current NFT holder via the standard record-delegation flow. SDKs SHOULD ensure `owner` reflects the intended signer before invoking these instructions; an NFT transferred via a marketplace alone does **not** automatically convey registry-side authority.
 
-#### Release-Name
+---
 
-Releases an ArNS name back to the AR.IO Network, making it available for registration by others.
+#### release_name
 
-Executable by the process `Owner` only.
+Releases a permanently purchased (permabuy) ArNS name back to the AR.IO Network, making it available for re-registration after a return auction period.
+
+**Program:** ario-arns
+
+**Authorization:** `ArnsRecord.owner` (see [Registry-Side Authorization](#registry-side-authorization)).
 
 ##### Parameters
 
-| Name           | Type   | Description                                                      |
-| -------------- | ------ | ---------------------------------------------------------------- |
-| IO-Process-Id  | string | The AR.IO Network Process ID to send the release request to.    |
-| Name           | string | The ArNS name to release, e.g., `ardrive` or `my-name`.         |
+No instruction-level parameters. The ArNS record is passed as part of the account context.
 
 ##### Rules
 
-- Must be the process `Owner`.
-- Must specify a valid `IO-Process-Id` parameter (Arweave address) as a message tag.
-- Must specify a valid `Name` parameter (string) as a message tag.
-- Sends a message to the AR.IO Network Process to release the name.
-- Must add `X-`forwarded tags to the response notice.
+- Caller must match `ArnsRecord.owner`.
+- Only permabuy names can be released (leased names expire naturally).
+- The name must be currently active (not expired).
+- Creates a `ReturnedName` entry and removes the name from the on-chain `NameRegistry`.
+- The ArNS record account is closed.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Release-Name",
-  ["IO-Process-Id"] = "{AR.IO Network Process ID}",
-  Name = "my-arns-name"
-})
-```
+| Error             | Condition                                       |
+| ----------------- | ----------------------------------------------- |
+| NotAntHolder      | Caller does not match `ArnsRecord.owner`        |
+| CannotReleaseLease| Name is a lease, not a permabuy                 |
+| RecordExpired     | Name has already expired                        |
 
-##### Responses
+---
 
-**Permission error, not authorized**
+#### reassign_name
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Release-Name-Notice",
-  Data = "Caller is not the process owner",
-  Error = "Release-Name-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+Reassigns an ArNS name from its current ANT to a different ANT. The name registration (lease or permabuy) stays intact; only the ANT association changes.
 
-**Invalid parameters**
+**Program:** ario-arns
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Release-Name-Notice",
-  Data = "Invalid Arweave ID",
-  Error = "Release-Name-Error",
-  ["Message-Id"] = msg.Id
-}
-```
-
-**Valid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Release-Name-Notice",
-  Initiator = msg.From,
-  Name = name,
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Reassign-Name
-
-Reassigns an ArNS name from this ANT to another ANT Process.
-
-Executable by the process `Owner` only.
+**Authorization:** `ArnsRecord.owner` (see [Registry-Side Authorization](#registry-side-authorization)).
 
 ##### Parameters
 
-| Name           | Type   | Description                                                      |
-| -------------- | ------ | ---------------------------------------------------------------- |
-| IO-Process-Id  | string | The AR.IO Network Process ID to send the reassign request to.   |
-| Process-Id     | string | The new ANT Process ID to assign the name to.                   |
-| Name           | string | The ArNS name to reassign, e.g., `ardrive` or `my-name`.        |
+| Name    | Type      | Description                                                         |
+| ------- | --------- | ------------------------------------------------------------------- |
+| new_ant | PublicKey | The Metaplex Core asset (mint) of the new ANT to assign the name to |
 
 ##### Rules
 
-- Must be the process `Owner`.
-- Must specify a valid `IO-Process-Id` parameter (Arweave address) as a message tag.
-- Must specify a valid `Process-Id` parameter (Arweave address) as a message tag.
-- Must specify a valid `Name` parameter (string) as a message tag.
-- Sends a message to the AR.IO Network Process to reassign the name.
-- Must add `X-`forwarded tags to the response notice.
+- Caller must match `ArnsRecord.owner`.
+- The name must be currently active (not expired or in grace period).
+- `new_ant` is stored without on-chain validation. Callers SHOULD verify it is a valid Metaplex Core asset client-side; subsequent ANT-side instructions will reject mismatches.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Reassign-Name",
-  ["IO-Process-Id"] = "{AR.IO Network Process ID}",
-  ["Process-Id"] = "{New ANT Process ID}",
-  Name = "my-arns-name"
-})
-```
+| Error         | Condition                                       |
+| ------------- | ----------------------------------------------- |
+| NotAntHolder  | Caller does not match `ArnsRecord.owner`        |
+| RecordExpired | Name has expired                                |
+| InGracePeriod | Name is in its grace period                     |
 
-##### Responses
+---
 
-**Permission error, not authorized**
+#### Primary Names
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Reassign-Name-Notice",
-  Data = "Caller is not the process owner",
-  Error = "Reassign-Name-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+A **primary name** is a wallet's display identity within the AR.IO ecosystem — when wallet `W` sets `ardrive_alice` as its primary, gateways and apps can render `W` as that name. The binding is two-way (forward + reverse lookup) and requires consent from both the requesting wallet and the name owner.
 
-**Invalid parameters**
+Flow:
+
+1. **Request** — Wallet `W` calls `request_primary_name(name)` on `ario-core`, paying a fee. A `PrimaryNameRequest` PDA is created with a 7-day expiry.
+2. **Approve** — The name owner (the `AntRecord.owner` for the relevant undername) calls `approve_primary_name`, consuming the request. This creates `PrimaryName` (forward: wallet → name) and `PrimaryNameReverse` (reverse: name → wallet) PDAs.
+3. **Remove** — Either `W` (via `remove_primary_name`) or the name owner (via `remove_primary_name_for_base_name`) can dissolve the binding at any time. Both `PrimaryName` and `PrimaryNameReverse` accounts are closed.
+
+PDA seeds (under `ario-core`):
 
 ```
-{
-  Target = msg.From,
-  Action = "Invalid-Reassign-Name-Notice",
-  Data = "Invalid Arweave ID",
-  Error = "Reassign-Name-Error",
-  ["Message-Id"] = msg.Id
-}
+PrimaryNameRequest  seeds = ["primary_name_request", requestor_pubkey]
+PrimaryName         seeds = ["primary_name",          owner_pubkey]
+PrimaryNameReverse  seeds = ["primary_name_reverse",  sha256(name.toLowerCase())]
 ```
 
-**Valid parameters**
+A `PrimaryNameRequest` older than the configured expiry (default 7 days) is closed permissionlessly by `close_expired_primary_name_request`. Approving an expired request fails with `PrimaryNameRequestExpired`.
 
-```
-{
-  Target = msg.From,
-  Action = "Reassign-Name-Notice",
-  Initiator = msg.From,
-  Name = name,
-  ["Process-Id"] = antProcessIdToReassign,
-  ... other forwarded tag name and value pairs
-}
-```
+---
 
-#### Approve-Primary-Name
+#### request_primary_name
 
-Approves a primary name request for a specific recipient address.
+Initiates a primary name request. The requestor (a normal user wallet) wishes to bind a name to their address; the name owner must subsequently approve.
 
-Executable by the process `Owner`, or the record owner (for their own undername).
+**Program:** ario-core
+
+**Authorization:** Any wallet may request (signs the transaction and pays the fee).
 
 ##### Parameters
 
-| Name                   | Type   | Description                                                      |
-| ---------------------- | ------ | ---------------------------------------------------------------- |
-| IO-Process-Id          | string | The AR.IO Network Process ID to send the approval to.           |
-| Recipient              | string | The address to approve for primary name usage.                  |
-| Name                   | string | The ArNS name or undername to approve, e.g., `ardrive`, `my-name`, or `alice`. |
-| Allow-Unsafe-Addresses | string | Optional. If set to `true`, allows addresses that may not be valid AO addresses. |
+| Name | Type   | Description                                       |
+| ---- | ------ | ------------------------------------------------- |
+| name | String | The ArNS name being requested (no undername; the binding is for `<wallet> → name`). |
 
 ##### Rules
 
-- Must be the process `Owner`, or the record owner of the specified undername.
-- If the caller is a record owner (not ANT owner), the `Recipient` must equal the caller's address (record owners can only approve primary names for themselves).
-- Must specify a valid `IO-Process-Id` parameter (Arweave address) as a message tag.
-- Must specify a valid `Recipient` parameter (AO address) as a message tag.
-- Must specify a valid `Name` parameter (string) as a message tag.
-- Sends a message to the AR.IO Network Process to approve the primary name request.
+- The ArNS name must exist in the registry and be active (lease not expired).
+- The fee (`PRIMARY_NAME_REQUEST_BASE_FEE`, ~0.2 ARIO at genesis) is charged in ARIO tokens.
+- Any existing `PrimaryNameRequest` for the requestor is overwritten.
+- Creates a `PrimaryNameRequest` with `expires_at = now + 7 days` (default).
 
-##### Action
+---
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Approve-Primary-Name",
-  ["IO-Process-Id"] = "{AR.IO Network Process ID}",
-  Recipient = "{Address to approve}",
-  Name = "alice" -- can be base name or undername
-})
-```
+#### approve_primary_name
 
-##### Responses
+Approves a pending primary name request. When a user requests to use an ArNS name as their primary name, the name owner must approve the request.
 
-**Permission error, not authorized**
+**Program:** ario-core
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Approve-Primary-Name-Notice",
-  Data = "Caller is not the process owner",
-  Error = "Approve-Primary-Name-Error",
-  ["Message-Id"] = msg.Id
-}
-```
-
-**Invalid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Approve-Primary-Name-Notice",
-  Data = "Invalid Arweave ID",
-  Error = "Approve-Primary-Name-Error",
-  ["Message-Id"] = msg.Id
-}
-```
-
-#### Remove-Primary-Names
-
-Removes one or more primary name associations.
-
-Executable by the process `Owner`, or record owners (for their own undernames).
+**Authorization:** `AntRecord.owner` for the requested undername (see [Registry-Side Authorization](#registry-side-authorization)).
 
 ##### Parameters
 
-| Name           | Type   | Description                                                      |
-| -------------- | ------ | ---------------------------------------------------------------- |
-| IO-Process-Id  | string | The AR.IO Network Process ID to send the removal request to.    |
-| Names          | string | Comma-separated list of names to remove primary status from.    |
+| Name                | Type     | Description                                         |
+| ------------------- | -------- | --------------------------------------------------- |
+| reverse_lookup_hash | [u8; 32] | Hash of the name (for reverse lookup PDA derivation) |
 
 ##### Rules
 
-- Must be the process `Owner`, or the record owner for each name being removed.
-- If the caller is a record owner (not ANT owner), they can only remove their own record's primary name status.
-- Must specify a valid `IO-Process-Id` parameter (Arweave address) as a message tag.
-- Must specify a valid `Names` parameter (comma-separated string) as a message tag.
-- Each name in the list must be a valid undername format.
-- Each name is validated to ensure the caller has permission (either ANT owner or the specific record owner).
-- Sends a message to the AR.IO Network Process to remove primary name associations.
+- Caller must match the `owner` field of the relevant `AntRecord`, read from the program named in the asset's `ANT Program` Attributes-plugin entry (or `ARIO_ANT_PROGRAM_ID` when absent).
+- The primary name request must not be expired.
+- The ArNS record (passed via `remaining_accounts`) must exist and be active (lease not expired).
+- If the requestor already has a different primary name set, they must remove it first.
+- Creates or updates the `PrimaryName` and `PrimaryNameReverse` accounts.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Remove-Primary-Names",
-  ["IO-Process-Id"] = "{AR.IO Network Process ID}",
-  Names = "name1,name2,name3"
-})
-```
+| Error                          | Condition                                              |
+| ------------------------------ | ------------------------------------------------------ |
+| NotAntHolder                   | Caller does not match `AntRecord.owner`                |
+| PrimaryNameRequestExpired      | The request has expired                                |
+| MustRemoveExistingPrimaryName  | Requestor already has a different primary name          |
+| PrimaryNameAlreadySet          | Another user already has this name as their primary     |
 
-##### Responses
+---
 
-**Permission error, not authorized**
+#### remove_primary_name
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Remove-Primary-Names-Notice",
-  Data = "Caller is not the process owner",
-  Error = "Remove-Primary-Names-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+Removes the caller's own primary-name binding. Self-service equivalent of `remove_primary_name_for_base_name`.
 
-**Invalid parameters**
+**Program:** ario-core
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Remove-Primary-Names-Notice",
-  Data = "Invalid Arweave ID",
-  Error = "Remove-Primary-Names-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+**Authorization:** The wallet that owns the `PrimaryName` binding (i.e., the wallet whose name is being unset).
 
-### Boot Handler
+##### Parameters
 
-The ANT process includes a special `_boot` handler that is triggered when the process is initialized or loaded. This handler is particularly important for WASM module implementations.
+No parameters. The binding to remove is identified by the caller's pubkey via PDA derivation.
 
-#### Behavior
+##### Rules
 
-When the process receives a boot message (Type = "Process" from the Owner):
+- Closes the caller's `PrimaryName` and the corresponding `PrimaryNameReverse` PDA.
 
-1. **State Initialization**: If the message includes Data containing a valid JSON state, the ANT will initialize its state from this data, setting:
-   - Records
-   - Controllers
-   - Owner
-   - Name, Ticker, Logo, Description, Keywords (if ARNS-TOKEN-1 is implemented)
-   - Balances (if ARNS-TOKEN-1 is implemented)
+---
 
-2. **Credit Notice**: Sends a Credit-Notice to the Owner (if ARNS-TOKEN-1 is implemented).
+#### remove_primary_name_for_base_name
 
-3. **State Notification**: 
-   - Sends a State-Notice to the ANT Registry (if configured with ANT-Registry-Id tag).
-   - Sends a patch notice for state caching.
-   - Sends a self State-Notice to enable caching.
+Removes a primary name association for a base ArNS name. This allows the name owner to revoke a user's primary name that was set using their ArNS name.
 
-4. **Initialized Flag**: Sets the `Initialized` flag to true after successful initialization.
+**Program:** ario-core
 
-#### Rules
+**Authorization:** `AntRecord.owner` for the `@` undername (see [Registry-Side Authorization](#registry-side-authorization)).
 
-- Only the process Owner can trigger the boot handler.
-- Invalid JSON data will result in an Invalid-Boot-Notice error.
-- The boot handler has highest priority (prepended to handler list).
-- This handler is automatically configured and should not be modified.
+##### Parameters
+
+| Name                | Type     | Description                                         |
+| ------------------- | -------- | --------------------------------------------------- |
+| reverse_lookup_hash | [u8; 32] | Hash of the name (for reverse lookup PDA derivation) |
+
+##### Rules
+
+- Caller must match the `owner` field of the base name's `AntRecord` (`@` undername), read from the asset's declared ANT program (or `ARIO_ANT_PROGRAM_ID` fallback).
+- The ArNS record must be active.
+- Closes the `PrimaryName` and `PrimaryNameReverse` accounts.
+
+### Record Owner Delegation Model
+
+The `set_record` instruction supports an optional `record_owner` field that enables delegated control over individual undername records. This is the "record owner" tier of the three-tier permission model:
+
+1. **NFT holder** -- full control over all records, controllers, and metadata.
+2. **Controllers** -- can manage all records (create, update, remove) and are set by the NFT holder or other controllers.
+3. **Record owners** -- can update content fields (`target`, `ttl_seconds`, metadata) on their assigned record only. Cannot change `priority`, cannot assign or transfer `record_owner`, and cannot create or remove records.
+
+**Stale owner cleanup:** When an NFT is transferred, record-level owners become stale (they were granted by the previous NFT holder). The program detects this by comparing the record's `last_reconciled_owner` against `AntConfig.last_known_owner`. On any write to a record where these differ, the record's `owner` is cleared and `last_reconciled_owner` is updated. This prevents inherited record-level permissions from surviving NFT transfers.
+
+### Controller Auto-Clear on NFT Transfer
+
+When the NFT changes hands (via marketplace sale, direct transfer, or any Metaplex Core transfer mechanism), the controller list is automatically cleared on the next write operation that touches the `AntConfig` and `AntControllers` accounts. This is implemented via lazy reconciliation:
+
+1. Every write instruction reads the current NFT holder from the Metaplex Core asset account.
+2. If the holder differs from `AntConfig.last_known_owner`, the `AntControllers.controllers` vector is cleared and `last_known_owner` is updated.
+3. The new NFT holder can then add their own controllers.
+
+This design ensures that transferring an ANT NFT is a clean handoff -- the new holder starts with no controllers and no stale record-level owners, while the NFT holder always retains full access by virtue of holding the NFT.
