@@ -2,7 +2,7 @@
 
 ## Status:
 
-**In-Review**
+**Draft**
 
 ## Version:
 
@@ -12,26 +12,21 @@
 | 1.0.1   | Fixed Credit/Debit response notices for Transfer handler. | 2024-09-24 |
 | 1.1.0   | Added 'description' and 'keywords' metadata.              | 2024-10-14 |
 | 1.2.0   | Added Set-Logo to action map, fixed Set-Keywords examples, and documented ANT Registry callback. | 2025-07-29 |
+| 1.3.0   | Added record ownership and metadata fields for undernames. | 2025-08-01 |
+| 2.0.0   | Rewritten for Solana: ANTs are Metaplex Core NFTs with on-chain PDA state. Removed Balances, Denomination, TotalSupply, Mint, Burn, Info handler, and AO messaging. Added lazy controller reconciliation, explicit reconcile instruction, and schema-versioned migration. | 2026-04-20 |
+| 2.0.1   | Audit corrections: description max 256, keywords max 8, `AntRecordMetadata` PDA documented as a separate account. | 2026-05-11 |
 
 ## Abstract
 
-The **ARNS-TOKEN-1** specification defines the framework for creating and managing Arweave Name Tokens (ANTs) with token transferability, balances, and metadata. It builds on the core and management specifications to introduce a non-fungible token model specific to ArNS.
+The **ARNS-TOKEN-1** specification defines the framework for creating and managing AR.IO Name Tokens (ANTs) as non-fungible assets on Solana. Each ANT is a Metaplex Core NFT whose ownership is determined by the NFT holder. Extended state -- metadata, controllers, and undername records -- is stored in Program Derived Address (PDA) accounts managed by the `ario-ant` program. This specification builds on the **ARNS-CORE-1** (records) and **ARNS-MANAGE-1** (controllers) specifications to provide a complete, self-contained token model for ArNS names.
 
 ## Motivation
 
-The **ARNS-TOKEN-1** specification builds off of the **ARNS-MANAGE-1** and **ARNS-CORE-1** specifications and provides a standardized approach for adding token-like features to Arweave Name Tokens (ANTs), enabling them to be transferred, tracked, and managed as single, indivisible assets.
+The **ARNS-TOKEN-1** specification provides a standardized approach for representing AR.IO Name Tokens as Metaplex Core NFTs on Solana, enabling them to be transferred, tracked, and managed as single, indivisible assets within the Solana ecosystem.
 
-By implementing this specification, developers can extend the functionality of Arweave Names to include ownership transfer, metadata management, and integration with external services like block explorers and marketplaces. This allows for more dynamic and flexible use cases within the Arweave ecosystem, such as tokenizing digital identities or assets on the Permaweb.
+By implementing this specification, developers can extend the functionality of AR.IO Names to include ownership transfer via any Solana wallet or marketplace, metadata management, and integration with block explorers and NFT tooling. The Metaplex Core standard ensures broad compatibility with the Solana ecosystem while the `ario-ant` program provides the ArNS-specific state (records, controllers, metadata) that makes each ANT functional as a name token.
 
-The **ARNS-TOKEN-1** Specification merges the protocols set in the AO Token and Subledger Specification except it is designed to act as a single, non-fungible token. This means that there is a total, indivisible token supply of 1 for each ANT, and transferring it changes both the balance and ownership.
-
-For more information on the AO Token and Subledger Specification see https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#ao-Token-and-Subledger-Specification
-
-### Language of Implementation
-
-All examples and code snippets in this specification are written in Lua. This choice ensures compatibility with the AO Processes and the Arweave ecosystem.
-
-However, developers are not restricted to using Lua exclusively when building new features or extending functionalities around ArNS. While Lua is recommended for direct integration with existing infrastructure, other programming languages can be used, provided they adhere to the protocols and specifications outlined in this document.
+Unlike the previous AO-based model -- which embedded a single-supply fungible token inside an AO Process -- the Solana model leverages the native NFT primitive. Ownership is determined by who holds the Metaplex Core asset. There is no Balances table, no Denomination, and no TotalSupply. Transfer is a standard Metaplex Core NFT transfer, compatible with any Solana marketplace or wallet.
 
 ## Specification
 
@@ -39,724 +34,435 @@ However, developers are not restricted to using Lua exclusively when building ne
 
 The **ARNS-TOKEN-1** Specification includes the following requirements:
 
-- Must have a `Name` which is a friendly nickname of this ANT.
-  - Must be a string, eg. `ArDrive`.
-- Must have a `Ticker` which is a short token symbol, shown in block explorers and marketplaces.
-  - Must be a string, eg. `ANT-ARDRIVE`.
-- Must have a `Logo` image icon used by downstream apps.
-  - Must be a string eg. `Sie_26dvgyok0PZD_-iQAFOhOd5YxDTkczOLoqTTL_A`.
-  - Must be an Arweave transaction.
-- Must have a `Description` that is a brief description of this ANT and its purpose or use.  
-  - Must be a string eg. `ArDrive is a permaweb app that lets you upload, download and share your files easily.`
-  - Must not be longer than 512 characters.
-- Must have a table of `Keywords` used to further describe this ANT.
-  - `Keywords` must not contain more than 16 keywords.
-  - Each `Keyword` must be a string eg. `File-sharing`
-  - Each `Keyword` must consist of alphanumeric characters, dashes, underscores, @ or #.
-  - Each `Keyword` must not be longer than 32 characters.
-  - Each `Keyword` must not include spaces.
-  - Each `Keyword` must be unique in the table of `Keywords`.
-- Must have a `Denomination`, in compliance with the AO Token Blueprint, indicating the decimal places used by the token.
-  - Must be an integer.
-  - Must be set to 0, indicating no decimal places used by the Arweave Name Token.
-- Must have a `TotalSupply`, in compliance with the AO Token Blueprint, indicating the total amount of tokens minted.
-  - Must be an integer.
-  - Must be set to 1, indicating a single token in the supply.
-- Must have a `Balances` table which stores the current balance of minted Tokens.
-  - The Process `Owner` should be the only Token holder with a balance of 1.
-- Must have a `Balance` handler to read an individual user’s Token Balance.
-- Must have a `Balances` handler to read all Token Balances.
-- Must have a handler to Transfer the ANT.
-  - All Transfers move the single Token balance and Process Owner to the Recipient.
-  - Authorized for the Process `Owner` only.
-  - Transfer should have a `State` call-back message to the ANT Registry.
-- Must have an `Info` handler to read the Token metadata including `Name`, `Ticker`, `Total-Supply`, `Logo`, `Denomination`, `Description`, `Keywords` and `Owner`.
-  - `Total-Supply` must be returned as an integer string.
-  - `Denomination` must be returned as an integer string.
-- Must have a `Total-Supply `handler to calculate the total supply of outstanding Token balances.
-- Should have a `Set-Ticker` handler to change the ANT’s ticker.
-  - Authorized for the Process `Owner` and `Controllers`.
-- Should have a `Set-Name` handler to change the ANT’s name.
-  - Authorized for the Process `Owner` and `Controllers`.
-- Should have a `Set-Logo` handler to change the ANT’s logo.
-  - Authorized for the Process `Owner` and `Controllers`.
-- Should have a `Set-Description` handler to change the ANT’s description.
-  - Authorized for the Process `Owner` and `Controllers`.
-- Should have a `Set-Keywords` handler to change the ANT’s keywords.
-  - Authorized for the Process `Owner` and `Controllers`.
-- Handler to read entire ANT State must be updated to also return `Balances`, `Name`, `Ticker`, `Logo`, `Denomination`, `Description`, `Keywords` and `TotalSupply`.
+**Metadata (stored in an `AntConfig` PDA account, seeds: `["ant_config", mint]`):**
 
-The **ARNS-TOKEN-1** Specification does not include the ability to `Mint` or `Burn`; however, developers can extend ANTs to new functionality if needed.
+- Must have a `name` field which is a friendly name for this ANT.
+  - Must be a non-empty string, e.g., `"ArDrive"`.
+  - Must not exceed 61 characters.
+- Must have a `ticker` field which is a short token symbol, shown in block explorers and marketplaces.
+  - Must be a string, e.g., `"ANT-ARDRIVE"`.
+  - Must not exceed 16 characters.
+  - Defaults to `"ANT"` if not specified at initialization.
+- Must have a `logo` field which is an image icon used by downstream applications.
+  - Must be a valid Arweave transaction ID (43 base64url characters), e.g., `"Sie_26dvgyok0PZD_-iQAFOhOd5YxDTkczOLoqTTL_A"`.
+  - Logos reference Arweave transactions exclusively, preserving the permanence guarantee.
+  - Defaults to the AR.IO logo (`"AnYvLJTWcG9lr2Ll5MwYWZR2o5uTE39WbpYB0zCxwKM"`) if not specified at initialization.
+- Must have a `description` field that is a brief description of this ANT and its purpose or use.
+  - Must be a string, e.g., `"ArDrive is a permaweb app that lets you upload, download and share your files easily."`.
+  - Must not exceed 256 characters.
+- Must have a `keywords` field used to further describe this ANT.
+  - Must be an array of strings.
+  - Must not contain more than 8 keywords.
+  - Each keyword must not exceed 32 characters.
+  - Each keyword must consist of alphanumeric characters, dashes (`-`), underscores (`_`), `@`, or `#`.
+  - Each keyword must not include spaces.
+  - Each keyword must be unique within the array.
+- Must have a `last_known_owner` field that tracks the most recently observed NFT holder address.
+  - Used for lazy controller reconciliation (see Transfer section).
+- Must have a `version` field (unsigned 8-bit integer) indicating the schema version of this ANT's on-chain data.
+  - Used for per-ANT schema migrations via the `migrate_ant` instruction.
+
+**Ownership:**
+
+- Ownership is determined by the Metaplex Core NFT holder. The `ario-ant` program reads the owner directly from the Metaplex Core asset account data (AssetV1 layout: byte 0 is the Key discriminator, bytes 1-32 are the owner public key).
+- There is no Balances table, Denomination, or TotalSupply. These concepts from the AO token model do not apply to Metaplex Core NFTs.
+- There is no Mint or Burn capability within the `ario-ant` program. ANT minting is handled by the Metaplex Core program during asset creation; the `ario-ant` program's `initialize` instruction creates the associated PDA state after minting.
+
+**Transfer:**
+
+- Transfer is a standard Metaplex Core NFT transfer, executed via the Metaplex Core program (not a custom `ario-ant` instruction). This makes ANTs compatible with any Solana wallet or marketplace that supports Metaplex Core assets.
+- Upon the first `ario-ant` instruction executed after a transfer, the program detects that the NFT holder has changed (by comparing the on-chain NFT owner to `last_known_owner` in the `AntConfig` PDA). This triggers lazy reconciliation:
+  - All controllers are cleared from the `AntControllers` PDA.
+  - The `last_known_owner` field in `AntConfig` is updated to the new NFT holder.
+  - Record-level owners (`owner` field on `AntRecord` accounts) are cleared when their `last_reconciled_owner` differs from the updated `last_known_owner`.
+- A dedicated `reconcile` instruction is also available to explicitly trigger this reconciliation without performing any other operation. It is permissionless: anyone can call it for any ANT.
+- There are no Credit-Notice or Debit-Notice messages. Solana does not use AO-style inter-process messaging.
+
+**Metadata management instructions:**
+
+- Must have a `set_name` instruction to update the ANT's name.
+  - Authorized for the NFT holder or an authorized controller.
+- Must have a `set_ticker` instruction to update the ANT's ticker.
+  - Authorized for the NFT holder or an authorized controller.
+- Must have a `set_logo` instruction to update the ANT's logo.
+  - Must be a valid Arweave transaction ID (43 base64url characters).
+  - Authorized for the NFT holder or an authorized controller.
+- Must have a `set_description` instruction to update the ANT's description.
+  - Authorized for the NFT holder or an authorized controller.
+- Must have a `set_keywords` instruction to update the ANT's keywords.
+  - Authorized for the NFT holder or an authorized controller.
+
+**State reads:**
+
+- There is no `Info` handler or `State` handler. All ANT state is read directly from Solana accounts via RPC:
+  - `AntConfig` PDA -- metadata (name, ticker, logo, description, keywords, last_known_owner, version).
+  - `AntControllers` PDA -- controller list.
+  - `AntRecord` PDAs -- individual undername records (resolution-critical fields).
+  - `AntRecordMetadata` PDAs -- optional per-record metadata (lazy; absent when unset).
+  - Metaplex Core asset account -- current NFT holder (owner).
+- The complete state of an ANT is the union of these accounts.
+
+**ANT enumeration:**
+
+- The previous AO-based ANT Registry is replaced by on-chain account enumeration. Clients use Solana's `getProgramAccounts` RPC method with `memcmp` filters on the `ario-ant` program to discover all `AntConfig`, `AntControllers`, `AntRecord`, and `AntRecordMetadata` accounts.
+
+**Schema migration:**
+
+- Must have a `migrate_ant` instruction that upgrades an ANT's on-chain data layout to the latest schema version.
+  - Permissionless: anyone can pay to migrate any ANT. The instruction only upgrades the data layout and never changes user data.
+  - Uses Solana's `realloc` to handle account size changes between schema versions.
 
 ### Objects
 
-The **ARNS-TOKEN-1** specification leverages the general AO Token and Subledger specification, and includes all of the objects in **ARNS-MANAGE-1** and **ARNS-CORE-1**
+The **ARNS-TOKEN-1** specification stores state across multiple PDA accounts derived from the Metaplex Core asset's mint address. It includes all of the objects in **ARNS-MANAGE-1** (controllers) and **ARNS-CORE-1** (records).
 
-#### ARNS-TOKEN-1 Objects
+#### AntConfig
 
-```
--- ARNS-TOKEN-1 Objects
-Name = Name or "Arweave Name Token"
-Ticker = Ticker or "ANT"
-Description = Description or "This is an Arweave Name Token."
-Keywords = Keywords or {}
-Logo = Logo or "Sie_26dvgyok0PZD_-iQAFOhOd5YxDTkczOLoqTTL_A"
-Denomination = Denomination or 0
-TotalSupply = TotalSupply or 1
+Per-ANT configuration and metadata. One account per ANT.
 
--- ARNS-MANAGE-1 Objects
-Owner = Owner or ao.env.Process.Owner
-Controllers = Controllers or { Owner }
+PDA seeds: `["ant_config", <mint>]`
 
--- ARNS-CORE-1 Objects
-Records = Records or {
-  ["@"] = {
-    transactionId = "UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk",
-    ttlSeconds = 3600
-  }
-}
-```
+| Field              | Type           | Description                                                |
+| ------------------ | -------------- | ---------------------------------------------------------- |
+| `mint`             | PublicKey      | The Metaplex Core asset (NFT mint) this config belongs to. |
+| `name`             | String         | ANT display name (max 61 characters).                      |
+| `ticker`           | String         | Ticker symbol (max 16 characters), e.g., `"ANT-ARDRIVE"`. |
+| `logo`             | String         | Arweave transaction ID (43 base64url characters).          |
+| `description`      | String         | Brief description (max 256 characters).                    |
+| `keywords`         | Vec\<String\>  | Up to 8 keywords, each max 32 characters.                  |
+| `last_known_owner` | PublicKey      | Last observed NFT holder, for lazy reconciliation.         |
+| `bump`             | u8             | PDA bump seed.                                             |
+| `version`          | u8             | Schema version for per-ANT data migrations.                |
 
-### Handlers
+#### AntControllers
 
-#### Action Map
+Controller list for an ANT. One account per ANT.
 
-The following actions are handled in the **ARNS-TOKEN-1** specification, and include all of the actions contained in **ARNS-MANAGE-1**, **ARNS-CORE-1**, and AO Token specifications.
+PDA seeds: `["ant_controllers", <mint>]`
 
-```
-ARNSCoreSpecActionMap = {
-  -- read actions
-  Record = "Record",
-  Records = "Records",
-  State = "State",
-}
+| Field         | Type             | Description                                                  |
+| ------------- | ---------------- | ------------------------------------------------------------ |
+| `mint`        | PublicKey        | The Metaplex Core asset this controller list belongs to.     |
+| `controllers` | Vec\<PublicKey\> | Controller addresses (max 10).                               |
+| `bump`        | u8               | PDA bump seed.                                               |
 
-ARNSManageSpecActionMap = {
-  -- read actions
-  Controllers = "Controllers",
-  -- write actions
-  AddController = "Add-Controller",
-  RemoveController = "Remove-Controller",
-  SetRecord = "Set-Record",
-  RemoveRecord = "Remove-Record",
-}
+#### AntRecord
 
-ARNSTokenSpecActionMap = {
-  -- write
-  SetName = "Set-Name",
-  SetTicker = "Set-Ticker",
-  SetDescription = "Set-Description",
-  SetKeywords = "Set-Keywords",
-  SetLogo = "Set-Logo"
-}
+A single undername record for an ANT. One account per undername per ANT. Contains resolution-critical fields only; optional descriptive metadata lives in a separate `AntRecordMetadata` PDA (below).
 
-TokenSpecActionMap = {
-  Info = "Info",
-  Balances = "Balances",
-  Balance = "Balance",
-  Transfer = "Transfer",
-  TotalSupply = "Total-Supply",
-  -- not implemented
-  Mint = "Mint",
-  Burn = "Burn",
-}
-```
+PDA seeds: `["ant_record", <mint>, <hash(undername.lowercase())>]`
 
-#### Set-Name
+| Field                  | Type                    | Description                                                          |
+| ---------------------- | ----------------------- | -------------------------------------------------------------------- |
+| `mint`                 | PublicKey               | The Metaplex Core asset this record belongs to.                      |
+| `undername`            | String                  | The undername (e.g., `"@"`, `"blog"`, `"docs"`), stored lowercase.   |
+| `target`               | String                  | Content address -- Arweave TX ID (43 chars), IPFS CID, or future protocol (max 128 chars). |
+| `target_protocol`      | u8                      | Storage protocol: `0` = Arweave, `1` = IPFS, `2+` = reserved.       |
+| `ttl_seconds`          | u32                     | TTL in seconds (60--86400).                                          |
+| `priority`             | Option\<u32\>           | Ordering priority. `Some(0)` required for `@`; `None` = unset.      |
+| `owner`                | Option\<PublicKey\>     | Optional record-level owner (delegated control).                     |
+| `last_reconciled_owner`| PublicKey               | ANT owner at last record modification; stale records are cleared.    |
+| `bump`                 | u8                      | PDA bump seed.                                                       |
+| `version`              | u8                      | Schema version for per-record data migrations.                       |
 
-Updates the `Name` or the nickname for the ANT.
+#### AntRecordMetadata
 
-Executable by the process `Owner` or an authorized user in the `Controllers` table.
+Optional descriptive metadata for a record. Created lazily when an optional field is first written. Resolvers MAY skip reading this account when only resolution data is needed.
 
-##### Parameters
+PDA seeds: `["ant_record_meta", <mint>, <hash(undername.lowercase())>]`
 
-| Name | Type   | Description               |
-| ---- | ------ | ------------------------- |
-| Name | string | The new Name for the ANT. |
+| Field                | Type                    | Description                                                       |
+| -------------------- | ----------------------- | ----------------------------------------------------------------- |
+| `mint`               | PublicKey               | The Metaplex Core asset this metadata belongs to.                 |
+| `display_name`       | Option\<String\>        | Optional display name (max 61 characters).                        |
+| `record_logo`        | Option\<String\>        | Optional logo (Arweave TX ID, 43 characters).                     |
+| `record_description` | Option\<String\>        | Optional description (max 256 characters).                        |
+| `record_keywords`    | Option\<Vec\<String\>\> | Optional keywords (same validation rules as ANT-level keywords).  |
+| `bump`               | u8                      | PDA bump seed.                                                    |
+| `version`            | u8                      | Schema version for per-record-metadata migrations.                |
 
-##### Rules
+### Instructions
 
-- Must be an authorized process `Owner` or `Controller`.
-- Must specify a valid `Name` parameter (string) as a message tag.
-- Should add `X-`forwarded tags to the response notice.
+#### Instruction Map
 
-##### Action
+The following instructions are provided by the `ario-ant` program. This list includes all instructions from the **ARNS-CORE-1** and **ARNS-MANAGE-1** specifications.
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Set-Name",
-  Name = "ArDrive"
-})
-```
+**From ARNS-CORE-1 (record management):**
 
-##### Responses
+| Instruction       | Description                                       |
+| ----------------- | ------------------------------------------------- |
+| `set_record`      | Create or update an undername record.              |
+| `remove_record`   | Remove an undername record (cannot remove `@`).    |
+| `transfer_record` | Transfer record-level ownership to another address.|
 
-**Permission error, not authorized**
+**From ARNS-MANAGE-1 (controller management):**
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Name-Notice",
-  Data = permissionErr,
-  Error = "Set-Name-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+| Instruction          | Description                        |
+| -------------------- | ---------------------------------- |
+| `add_controller`     | Add a controller address.          |
+| `remove_controller`  | Remove a controller address.       |
 
-**Invalid parameters**
+**ARNS-TOKEN-1 (metadata management):**
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Name-Notice",
-  Data = nameRes,
-  Error = "Set-Name-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+| Instruction        | Description                        |
+| ------------------ | ---------------------------------- |
+| `set_name`         | Update ANT display name.           |
+| `set_ticker`       | Update ANT ticker symbol.          |
+| `set_description`  | Update ANT description.            |
+| `set_keywords`     | Update ANT keywords.               |
+| `set_logo`         | Update ANT logo.                   |
 
-**Valid parameters**
+**Lifecycle:**
 
-```
-{
-  Target = msg.From,
-  Action = "Set-Name-Notice",
-  Data = json.encode({ Name = Name }),
-  ... other forwarded tag name and value pairs
-}
-```
+| Instruction           | Description                                                    |
+| --------------------- | -------------------------------------------------------------- |
+| `initialize`          | Initialize ANT state (config, controllers, `@` record).       |
+| `reconcile`           | Explicitly trigger lazy ownership reconciliation.              |
+| `migrate_ant`         | Upgrade ANT schema to latest version (permissionless).         |
 
-#### Set-Ticker
+#### initialize
 
-Updates the `Ticker` symbol for this ANT.
+Initializes an ANT's on-chain PDA state after a Metaplex Core asset has been minted. Creates the `AntConfig`, `AntControllers`, and root `@` record accounts.
 
-Executable by the process `Owner` or an authorized user in the `Controllers` table.
+Executable only by the current NFT holder.
 
 ##### Parameters
 
-| Name   | Type   | Description                 |
-| ------ | ------ | --------------------------- |
-| Ticker | string | The new Ticker for the ANT. |
+| Name             | Type           | Required | Description                                              |
+| ---------------- | -------------- | -------- | -------------------------------------------------------- |
+| `name`           | String         | Yes      | ANT display name (non-empty, max 61 characters).         |
+| `ticker`         | Option\<String\> | No    | Ticker symbol (max 16 characters). Defaults to `"ANT"`.  |
+| `target`           | String         | Yes      | Content target for the `@` record (Arweave TX ID, IPFS CID, etc., max 128 chars). |
+| `target_protocol`  | Option\<u8\>  | No       | Storage protocol (`0` = Arweave, `1` = IPFS). Defaults to `0` (Arweave). |
+| `logo`           | String         | No       | Arweave TX ID for logo. Empty string uses default logo.  |
+| `description`    | String         | No       | Description (max 256 characters). Can be empty.          |
+| `keywords`       | Vec\<String\>  | No       | Keywords (max 8, each max 32 chars). Can be empty.       |
 
 ##### Rules
 
-- Must be an authorized process `Owner` or `Controller`.
-- Must specify a valid `Ticker` parameter (string) as a message tag.
-- Should add `X-`forwarded tags to the response notice.
+- Caller must be the current NFT holder (verified by reading the Metaplex Core asset's owner bytes).
+- The Metaplex Core asset account must be owned by the Metaplex Core program (`CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d`).
+- All PDA accounts (`AntConfig`, `AntControllers`, root `AntRecord`) must not already exist (enforced by Anchor's `init` constraint).
+- The NFT holder is added as the initial controller.
+- The root `@` record is created with `priority = Some(0)` and `ttl_seconds = 900` (default).
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Set-Ticker",
-  Ticker = "ANT-ARDRIVE"
-})
-```
+| Error Code       | Condition                                                    |
+| ---------------- | ------------------------------------------------------------ |
+| `NotNftHolder`   | Caller is not the NFT holder.                                |
+| `InvalidAsset`   | Asset account is not a valid Metaplex Core AssetV1.          |
+| `NameEmpty`      | Name is an empty string.                                     |
+| `NameTooLong`    | Name exceeds 61 characters.                                  |
+| `TickerTooLong`  | Ticker exceeds 16 characters.                                |
+| `InvalidTarget`  | Content target is not valid for the declared protocol.       |
+| `InvalidLogo`    | Logo is not a valid Arweave transaction ID.                  |
+| `DescriptionTooLong` | Description exceeds 256 characters.                      |
+| `InvalidKeyword` | Keywords fail validation (count, length, format, uniqueness).|
 
-##### Responses
+#### set_name
 
-**Permission error, not authorized**
+Updates the `name` field on the `AntConfig` PDA.
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Ticker-Notice",
-  Data = permissionErr,
-  Error = "Set-Ticker-Error",
-  ["Message-Id"] = msg.Id
-}
-```
-
-**Invalid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Ticker-Notice",
-  Data = tickerRes,
-  Error = "Set-Ticker-Error",
-  ["Message-Id"] = msg.Id,
-}
-```
-
-**Valid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Set-Ticker-Notice",
-  Data = json.encode({ Ticker = Ticker }),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Set-Description
-
-Updates the `Description` of this ANT.
-
-Executable by the process `Owner` or an authorized user in the `Controllers` table.
+Executable by the NFT holder or an authorized controller.
 
 ##### Parameters
 
-| Name   | Type   | Description                 |
-| ------ | ------ | --------------------------- |
-| Description | string | The new Description for the ANT. |
+| Name   | Type   | Description                              |
+| ------ | ------ | ---------------------------------------- |
+| `name` | String | The new name for the ANT (max 61 chars). |
 
 ##### Rules
 
-- Must be an authorized process `Owner` or `Controller`.
-- Must specify a valid `Description` parameter (string) as a message tag.
-- `Description` must not be longer than 512 characters.
-- Should add `X-`forwarded tags to the response notice.
+- Caller must be the NFT holder or an authorized controller.
+- Name must be a non-empty string.
+- Name must not exceed 61 characters.
+- Lazy reconciliation is performed before the permission check.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Set-Description",
-  Description = "ArDrive is an app that makes it easy to upload, download and share your public or private files on Arweave"
-})
-```
+| Error Code     | Condition                                          |
+| -------------- | -------------------------------------------------- |
+| `Unauthorized` | Caller is not the NFT holder or a controller.      |
+| `NameEmpty`    | Name is an empty string.                           |
+| `NameTooLong`  | Name exceeds 61 characters.                        |
 
-##### Responses
+#### set_ticker
 
-**Permission error, not authorized**
+Updates the `ticker` field on the `AntConfig` PDA.
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Description-Notice",
-  Data = permissionErr,
-  Error = "Set-Description-Error",
-  ["Message-Id"] = msg.Id
-}
-```
-
-**Invalid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Description-Notice",
-  Data = descriptionRes,
-  Error = "Set-Description-Error",
-  ["Message-Id"] = msg.Id,
-}
-```
-
-**Valid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Set-Description-Notice",
-  Data = json.encode({ Description = Description }),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Set-Keywords
-
-Updates the `Keywords` of this ANT.
-
-Executable by the process `Owner` or an authorized user in the `Controllers` table.
+Executable by the NFT holder or an authorized controller.
 
 ##### Parameters
 
-| Name   | Type   | Description                 |
-| ------ | ------ | --------------------------- |
-| Keywords | table | The new Keywords for the ANT. |
+| Name     | Type   | Description                                  |
+| -------- | ------ | -------------------------------------------- |
+| `ticker` | String | The new ticker for the ANT (max 16 chars).   |
 
 ##### Rules
 
-- Must be an authorized process `Owner` or `Controller`.
-- Must specify a valid `Keywords` parameter (table) as a message tag.
-- Each `Keyword` must not be longer than 32 characters.
-- Each `Keyword` must consist of alphanumeric characters, dashes, underscores, @ or #.
-- Each `Keyword` must not include spaces.
-- Each `Keyword` must be unique in the table of `Keywords`.
-- There must not be more than 16 total `Keywords`.
-- Should add `X-`forwarded tags to the response notice.
+- Caller must be the NFT holder or an authorized controller.
+- Ticker must be a non-empty string.
+- Ticker must not exceed 16 characters.
+- Lazy reconciliation is performed before the permission check.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Set-Keywords",
-  Keywords = json.encode(["file-sharing", "storage", "permaweb", "arweave"])
-})
-```
+| Error Code     | Condition                                          |
+| -------------- | -------------------------------------------------- |
+| `Unauthorized` | Caller is not the NFT holder or a controller.      |
+| `TickerEmpty`  | Ticker is an empty string.                         |
+| `TickerTooLong`| Ticker exceeds 16 characters.                      |
 
-##### Responses
+#### set_description
 
-**Permission error, not authorized**
+Updates the `description` field on the `AntConfig` PDA.
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Keywords-Notice",
-  Data = permissionErr,
-  Error = "Set-Keywords-Error",
-  ["Message-Id"] = msg.Id
-}
-```
-
-**Invalid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Keywords-Notice",
-  Data = keywordsRes,
-  Error = "Set-Keywords-Error",
-  ["Message-Id"] = msg.Id,
-}
-```
-
-**Valid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Set-Keywords-Notice",
-  Data = json.encode({ Keywords = Keywords }),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Set-Logo
-
-Updates the `Logo` transaction ID for this ANT.
-
-Executable by the process `Owner` or an authorized user in the `Controllers` table.
+Executable by the NFT holder or an authorized controller.
 
 ##### Parameters
 
-| Name | Type   | Description                    |
-| ---- | ------ | ------------------------------ |
-| Logo | string | The new Logo transaction ID for the ANT. |
+| Name          | Type   | Description                                        |
+| ------------- | ------ | -------------------------------------------------- |
+| `description` | String | The new description for the ANT (max 256 chars).   |
 
 ##### Rules
 
-- Must be an authorized process `Owner` or `Controller`.
-- Must specify a valid `Logo` parameter (Arweave transaction ID) as a message tag.
-- Should add `X-`forwarded tags to the response notice.
+- Caller must be the NFT holder or an authorized controller.
+- Description must not exceed 256 characters. An empty string is permitted (clears the description).
+- Lazy reconciliation is performed before the permission check.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Set-Logo",
-  Logo = "KKmRbIfrc7wiLcG0zvY1etlO0NBx1926dSCksxCIN3A"
-})
-```
+| Error Code          | Condition                                          |
+| ------------------- | -------------------------------------------------- |
+| `Unauthorized`      | Caller is not the NFT holder or a controller.      |
+| `DescriptionTooLong`| Description exceeds 256 characters.                |
 
-##### Responses
+#### set_keywords
 
-**Permission error, not authorized**
+Updates the `keywords` field on the `AntConfig` PDA.
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Logo-Notice",
-  Data = permissionErr,
-  Error = "Set-Logo-Error",
-  ["Message-Id"] = msg.Id
-}
-```
-
-**Invalid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Set-Logo-Notice",
-  Data = logoRes,
-  Error = "Set-Logo-Error",
-  ["Message-Id"] = msg.Id,
-}
-```
-
-**Valid parameters**
-
-```
-{
-  Target = msg.From,
-  Action = "Set-Logo-Notice",
-  Data = json.encode({ Logo = Logo }),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Balance
-
-Returns the balance of a target; if a target is not supplied, then the balance of the sender of the message must be returned.
-
-Executable by anonymous users.
-
-AO Token Specification reference: https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#BalanceTarget--string
+Executable by the NFT holder or an authorized controller.
 
 ##### Parameters
 
-| Name      | Type   | Description                       |
-| --------- | ------ | --------------------------------- |
-| Recipient | string | The recipient to get balance for. |
+| Name       | Type          | Description                             |
+| ---------- | ------------- | --------------------------------------- |
+| `keywords` | Vec\<String\> | The new keywords for the ANT.           |
 
 ##### Rules
 
-- Must return entire `Balances` table as JSON in the data field of the response notice.
-- Should add `X-`forwarded tags to the response notice.
+- Caller must be the NFT holder or an authorized controller.
+- Must not contain more than 8 keywords.
+- Each keyword must not exceed 32 characters.
+- Each keyword must consist of alphanumeric characters, dashes (`-`), underscores (`_`), `@`, or `#`.
+- Each keyword must not include spaces.
+- Each keyword must be unique within the array.
+- An empty array is permitted (clears all keywords).
+- Lazy reconciliation is performed before the permission check.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Balances"
-})
-```
+| Error Code       | Condition                                                |
+| ---------------- | -------------------------------------------------------- |
+| `Unauthorized`   | Caller is not the NFT holder or a controller.            |
+| `InvalidKeyword` | Keywords fail validation (count, length, format, or uniqueness). |
 
-##### Responses
+#### set_logo
 
-**Valid `Balances`**
+Updates the `logo` field on the `AntConfig` PDA.
 
-```
-{
-  Target = msg.From,
-  Action = "Balances-Notice",
-  Data = json.encode(Balances),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Balances
-
-Gets the entire Balances table, including each token holder and their current balance.
-
-Executable by anonymous users.
-
-AO Token Specification reference: https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#Balances
-
-##### Rules
-
-- Must return entire `Balances` table as JSON in the data field of the response notice.
-- Should add `X-`forwarded tags to the response notice.
-
-##### Action
-
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Balances"
-})
-```
-
-##### Responses
-
-**Valid `Balances`**
-
-```
-{
-  Target = msg.From,
-  Action = "Balances-Notice",
-  Data = json.encode(Balances),
-  ... other forwarded tag name and value pairs
-}
-```
-
-#### Transfer
-
-If the sender is authorized, transfer ANT Ownership to the `Recipient`, issuing a `Credit-Notice` to the recipient and a `Debit-Notice` to the sender. If the sender is not authorized, fail and notify the sender.
-
-Additionally, the ARNS-TOKEN-1 specification modifies the AO Token transfer specification to accommodate its non-fungible, single token supply.
-
-It is executable only by the single Token `Balance` holder, process `Owner`, or Process itself.
-
-`Quantity` is no longer needed, since the ARNS-TOKEN-1 specification calls for a single token in the supply. `Transfer` will move the single token to the `Recipient`.
-
-Upon transfer, it also sets the `Recipient` of the token transfer to be the new `Owner` of the process, as well as clears out any previous `Controllers`.
-
-AO Token Specification reference: https://hackmd.io/8DiMkhuNThOb_ooTWKqxaw#TransferTarget-Quantity
+Executable by the NFT holder or an authorized controller.
 
 ##### Parameters
 
-| Name      | Type   | Description                                                                                                   |
-| --------- | ------ | ------------------------------------------------------------------------------------------------------------- |
-| Recipient | string | The wallet address to transfer the ANT ownership and token, e.g., iKryOeZQMONi2965nKz528htMMN_sBcjlhc-VncoRjA |
+| Name   | Type   | Description                                              |
+| ------ | ------ | -------------------------------------------------------- |
+| `logo` | String | Arweave transaction ID (43 base64url characters).        |
 
 ##### Rules
 
-- Must be the ANT `Balance` holder, process `Owner`, or Process itself.
-- Must add `X-`forwarded tags to the `Credit-Notice` and `Debit-Notice` responses.
-- Should send a `State` notice to any associated ANT Registry Processes.
+- Caller must be the NFT holder or an authorized controller.
+- Logo must be a valid Arweave transaction ID: exactly 43 characters, each character alphanumeric or `-` or `_` (base64url encoding).
+- Lazy reconciliation is performed before the permission check.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Transfer",
-  Recipient = "{Wallet Address}"
-})
-```
+| Error Code     | Condition                                          |
+| -------------- | -------------------------------------------------- |
+| `Unauthorized` | Caller is not the NFT holder or a controller.      |
+| `InvalidLogo`  | Logo is not a valid 43-character Arweave TX ID.    |
 
-##### Responses
+#### Transfer (Metaplex Core)
 
-**Permission error, not authorized**
+ANT ownership transfer is a standard Metaplex Core NFT transfer. It is **not** an `ario-ant` program instruction. Any Solana wallet, marketplace, or application that supports Metaplex Core transfers can transfer an ANT.
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Transfer-Notice",
-  Data = permissionErr,
-  Error = "Transfer-Error",
-  ["Message-Id"] = msg.Id
-}
-```
+##### Behavior
 
-**Invalid parameters**
+1. The NFT is transferred using the Metaplex Core program's transfer instruction.
+2. The `ario-ant` program is not invoked during the transfer itself.
+3. On the next `ario-ant` instruction for this ANT (any instruction that reads the asset account), the program detects the ownership change by comparing the NFT holder to `AntConfig.last_known_owner`.
+4. Lazy reconciliation occurs automatically:
+   - `AntControllers.controllers` is cleared (empty array).
+   - `AntConfig.last_known_owner` is updated to the new NFT holder.
+5. On the next interaction with each `AntRecord`, if `record.last_reconciled_owner` differs from `config.last_known_owner`, the record's `owner` field is cleared and `last_reconciled_owner` is updated.
 
-```
-{
-  Target = msg.From,
-  Action = "Invalid-Transfer-Notice",
-  Data = transferResult,
-  Error = "Transfer-Error",
-  ["Message-Id"] = msg.Id,
-}
-```
+##### Explicit Reconciliation
 
-**Valid parameters**
+The `reconcile` instruction can be called to explicitly trigger ownership reconciliation without performing any other operation. This is useful after a marketplace transfer to ensure the ANT's state is clean before the new owner interacts with it.
 
-```
--- Debit-Notice message template, that is sent to the Sender of the transfer
-{
-  Target = msg.From,
-  Action = "Debit-Notice",
-  Recipient = msg.Tags.Recipient,
-  Quantity = msg.Tags.Quantity,
-  Data = "You transferred " .. msg.Tags.Quantity .. " to " .. msg.Tags.Recipient,
-}
--- Credit-Notice message template, that is sent to the Recipient of the transfer
-{
-  Target = msg.Tags.Recipient,
-  Action = "Credit-Notice",
-  Sender = msg.From,
-  Quantity = msg.Tags.Quantity,
-  Data = "You received " .. msg.Tags.Quantity .. " from " .. msg.From,
-}
-```
+- Permissionless: anyone can call `reconcile` for any ANT.
+- Idempotent: calling `reconcile` when no ownership change has occurred is a no-op.
 
-#### Info
+#### reconcile
 
-Returns all Token metadata associated with this process including its `Name`, `Ticker`, `Total-Supply`, `Logo`, `Denomination`, and process `Owner`.
+Explicitly triggers lazy ownership reconciliation. Clears controllers if NFT ownership has changed since the last recorded owner. Does not modify records (record-level reconciliation happens per-record on next interaction).
 
-Executable by anonymous users.
+Permissionless: anyone can call this for any ANT.
 
 ##### Parameters
 
-No parameters necessary.
+No parameters.
 
 ##### Rules
 
-- Must return general process information as encoded JSON in the data field and as tags of the response notice. Info JSON must include:
-  - Process `Owner`
-  - `Name`, `Ticker`, `Logo`, `Description`, and `Keywords`
-  - `Denomination` and `Total-Supply` as integer strings.
+- If `AntConfig.last_known_owner` differs from the current NFT holder, controllers are cleared and `last_known_owner` is updated.
+- If no ownership change is detected, the instruction is a no-op.
 
-##### Action
+#### migrate_ant
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "Info"
-})
-```
+Upgrades an ANT's on-chain data layout to the latest schema version. Uses Solana's `realloc` to handle account size changes between schema versions.
 
-##### Responses
-
-**Valid Info**
-
-```
-{
-  Target = msg.From,
-  Action = "Info-Notice",
-  Tags = {
-    Name = Name,
-    Ticker = Ticker,
-    ["Total-Supply"] = tostring(TotalSupply),
-    Logo = Logo,
-    Denomination = tostring(Denomination),
-    Owner = Owner,
-  },
-  Data = json.encode({
-    Name = Name,
-    Ticker = Ticker,
-    ["Total-Supply"] = tostring(TotalSupply),
-    Logo = Logo,
-    Denomination = tostring(Denomination),
-    Owner = Owner,
-    ["Source-Code-TX-ID"] = SourceCodeTxId,
-  })
-}
-```
-
-#### State
-
-The State handler is updated in **ARNS-TOKEN-1** to return all information about the state of the token, including all `Records`, `Owner`, `Controllers`, `Balances`, `Name`, `Ticker`, `Logo`, `Description`, `Keywords`, `Denomination`, and `TotalSupply`.
-
-Executable by anonymous users.
+Permissionless: anyone can pay the rent differential to migrate any ANT. The instruction only upgrades the data layout and never changes user data.
 
 ##### Parameters
 
-No parameters necessary.
+No parameters.
 
 ##### Rules
 
-- Must return the full state of the process as encoded JSON in the data field of the response notice. State information must include:
-  - Entire `Records` table
-  - Entire `Controllers` table
-  - Entire `Balances` table
-  - Process `Owner`
-  - `Name`, `Ticker`, `Logo`, `Description` and `Keywords`
-  - `Denomination` and `TotalSupply`
-- Must add `X-`forwarded tags to the response notice.
+- The ANT's current `version` must be less than the program's `ANT_CONFIG_VERSION` constant.
+- The payer covers any rent increase from account reallocation.
 
-##### Action
+##### Errors
 
-```
-Send({
-  Target = "{Process Identifier}",
-  Action = "State"
-})
-```
+| Error Code            | Condition                                       |
+| --------------------- | ----------------------------------------------- |
+| `AlreadyLatestVersion`| ANT is already at the latest schema version.    |
 
-##### Responses
+#### State (Account Reads)
 
-**Valid `State`**
+There is no dedicated `State` or `Info` instruction. The full state of an ANT is read directly from Solana accounts via standard RPC calls:
 
-```
-{
-  Target = msg.From,
-  Action = "State-Notice",
-  Data = json.encode({
-    Records = Records,
-    Controllers = Controllers,
-    Balances = Balances,
-    Owner = Owner,
-    Name = Name,
-    Ticker = Ticker,
-    Logo = Logo,
-    Description = Description,
-    Keywords = Keywords,
-    Denomination = Denomination,
-    TotalSupply = TotalSupply,
-  }),
-  ... other forwarded tag name and value pairs
-}
-```
+| Account            | PDA Seeds                                                | Contents                                                       |
+| ------------------ | -------------------------------------------------------- | -------------------------------------------------------------- |
+| `AntConfig`         | `["ant_config", mint]`                                   | name, ticker, logo, description, keywords, last_known_owner, version |
+| `AntControllers`    | `["ant_controllers", mint]`                              | controller addresses                                           |
+| `AntRecord`         | `["ant_record", mint, hash(undername.lowercase())]`      | undername, target, target_protocol, ttl_seconds, priority, owner, last_reconciled_owner |
+| `AntRecordMetadata` | `["ant_record_meta", mint, hash(undername.lowercase())]` | display_name, record_logo, record_description, record_keywords (lazy; absent when no optional fields set) |
+| Metaplex Core Asset | (Asset mint address)                                     | Current NFT holder (owner)                                     |
+
+To enumerate all records for a given ANT, use `getProgramAccounts` with a `memcmp` filter matching the `mint` field in `AntRecord` accounts.
+
+To enumerate all ANTs, use `getProgramAccounts` with the `ario-ant` program ID and a `memcmp` filter on the account discriminator for `AntConfig`.
