@@ -15,6 +15,7 @@
 | 2.1.0   | Pluggable ANT program: management instructions live on the program named in the asset's `ANT Program` Attributes-plugin entry. Conformance is on the third-party program. | 2026-05-03 |
 | 2.1.1   | Audit corrections: ADR-016 authorization model for registry-side instructions (caller matches stored `owner`, not current NFT holder), `AntRecordMetadata` PDA split, description max 256, keywords max 8, `reassign_name` parameter clarification. | 2026-05-11 |
 | 2.1.2   | Documented full primary-name flow (`request_primary_name`, `remove_primary_name`); added Primary Names concept section and PDA seeds. | 2026-05-11 |
+| 2.1.3   | Contract-drift corrections: controllers max 4, keywords max 3, description max 128; `version` fields are a 3-byte `SchemaVersion`; `AntControllers` carries `version`; expiry-close instruction is `close_expired_request`; primary-name fee is a lease/permabuy split. | 2026-06-09 |
 
 ## Abstract
 
@@ -39,7 +40,7 @@ The **ARNS-MANAGE-1** specification requires the following capabilities:
 - Must maintain a list of `Controllers` -- addresses authorized to manage records on behalf of the NFT holder.
 - Must have an `add_controller` instruction to add new controllers.
   - Authorized for the NFT holder or existing controllers only.
-  - Maximum 10 controllers per ANT.
+  - Maximum 4 controllers per ANT.
 - Must have a `remove_controller` instruction to remove controllers.
   - Authorized for the NFT holder or existing controllers only.
 - Controllers must be automatically cleared when the NFT is transferred to a new holder (lazy reconciliation).
@@ -92,8 +93,9 @@ Stores the controller list for an ANT. Derived as a PDA with seeds `["ant_contro
 | Field       | Type      | Description                                        |
 | ----------- | --------- | -------------------------------------------------- |
 | mint        | PublicKey | The Metaplex Core asset (NFT mint) this belongs to |
-| controllers | PublicKey[] | Controller addresses (max 10)                    |
+| controllers | PublicKey[] | Controller addresses (max 4)                    |
 | bump        | u8        | PDA bump seed                                      |
+| version     | SchemaVersion | Schema version for migrations (3-byte: major/minor/patch) |
 
 #### AntRecord (extended from ARNS-CORE-1)
 
@@ -112,7 +114,7 @@ PDA seeds: `["ant_record", mint, hash(undername.lowercase())]`
 | owner                 | Option\<PublicKey\> | Delegated record owner. When set, this address can update content fields (target, ttl, metadata) but cannot change priority or record ownership |
 | last_reconciled_owner | PublicKey       | ANT owner at last record modification -- used to detect stale record owners after NFT transfer |
 | bump                  | u8              | PDA bump seed                                                            |
-| version               | u8              | Schema version for per-record migrations                                 |
+| version               | SchemaVersion | Schema version for per-record migrations                                 |
 
 #### AntRecordMetadata
 
@@ -123,10 +125,10 @@ PDA seeds: `["ant_record_meta", mint, hash(undername.lowercase())]`
 | mint               | PublicKey           | The Metaplex Core asset this metadata belongs to       |
 | display_name       | Option\<String\>    | Optional display name (max 61 chars)                   |
 | record_logo        | Option\<String\>    | Optional logo (Arweave TX ID, 43 chars)                |
-| record_description | Option\<String\>    | Optional description (max 256 chars)                   |
-| record_keywords    | Option\<String[]\>  | Optional keywords (max 8, each max 32 chars)           |
+| record_description | Option\<String\>    | Optional description (max 128 chars)                   |
+| record_keywords    | Option\<String[]\>  | Optional keywords (max 3, each max 32 chars)           |
 | bump               | u8                  | PDA bump seed                                          |
-| version            | u8                  | Schema version for per-record-metadata migrations      |
+| version            | SchemaVersion | Schema version for per-record-metadata migrations      |
 
 ### Instructions
 
@@ -167,7 +169,7 @@ Adds an address to the controller list, granting it permission to manage records
 
 - Caller must be the NFT holder or an existing controller (after lazy reconciliation).
 - The `controller` address must not already exist in the controller list.
-- The controller list must not exceed 10 entries.
+- The controller list must not exceed 4 entries.
 
 ##### Errors
 
@@ -175,7 +177,7 @@ Adds an address to the controller list, granting it permission to manage records
 | ------------------------ | ------------------------------------------ |
 | Unauthorized             | Caller is not the NFT holder or controller |
 | ControllerAlreadyExists  | Address is already a controller            |
-| MaxControllersReached    | Controller list already has 10 entries     |
+| MaxControllersReached    | Controller list already has 4 entries     |
 
 ---
 
@@ -226,8 +228,8 @@ Creates a new undername record or updates an existing one. This is the primary i
 | record_owner        | Option\<PublicKey\> | Optional delegated owner address. Only NFT holder / controllers can set or clear this         |
 | display_name        | Option\<String\>  | Optional display name for this record (max 61 chars)                                          |
 | record_logo         | Option\<String\>  | Optional logo (Arweave TX ID, 43 chars)                                                       |
-| record_description  | Option\<String\>  | Optional description (max 256 chars)                                                          |
-| record_keywords     | Option\<String[]\> | Optional keywords (max 8 keywords, each max 32 chars, no duplicates)                          |
+| record_description  | Option\<String\>  | Optional description (max 128 chars)                                                          |
+| record_keywords     | Option\<String[]\> | Optional keywords (max 3 keywords, each max 32 chars, no duplicates)                          |
 
 ##### Rules
 
@@ -421,7 +423,7 @@ PrimaryName         seeds = ["primary_name",          owner_pubkey]
 PrimaryNameReverse  seeds = ["primary_name_reverse",  sha256(name.toLowerCase())]
 ```
 
-A `PrimaryNameRequest` older than the configured expiry (default 7 days) is closed permissionlessly by `close_expired_primary_name_request`. Approving an expired request fails with `PrimaryNameRequestExpired`.
+A `PrimaryNameRequest` older than the configured expiry (default 7 days) is closed permissionlessly by `close_expired_request`. Approving an expired request fails with `PrimaryNameRequestExpired`.
 
 ---
 
@@ -442,7 +444,7 @@ Initiates a primary name request. The requestor (a normal user wallet) wishes to
 ##### Rules
 
 - The ArNS name must exist in the registry and be active (lease not expired).
-- The fee (`PRIMARY_NAME_REQUEST_BASE_FEE`, ~0.2 ARIO at genesis) is charged in ARIO tokens.
+- The fee is charged in ARIO tokens and depends on the name's purchase type: `PRIMARY_NAME_REQUEST_BASE_FEE_LEASE` (0.2 ARIO at genesis) for a leased name, or `PRIMARY_NAME_REQUEST_BASE_FEE_PERMABUY` (1.0 ARIO at genesis) for a permabuy — each scaled by the current ArNS demand factor.
 - Any existing `PrimaryNameRequest` for the requestor is overwritten.
 - Creates a `PrimaryNameRequest` with `expires_at = now + 7 days` (default).
 

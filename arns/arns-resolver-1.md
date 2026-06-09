@@ -13,6 +13,7 @@
 | 2.1.0   | Pluggable ANT program: AntRecord PDAs are derived against the program named in the asset's `ANT Program` Attributes-plugin entry. New `x-arns-ant-program` response header. | 2026-05-03 |
 | 2.1.1   | Audit corrections: `NameRegistry` slot count is 200,000 (not 50,000). | 2026-05-11 |
 | 2.1.2   | Added explicit `ArnsRecord` / `ReturnedName` / `ReservedName` PDA derivation; AntRecordMetadata fields split out of AntRecord listing; event-subscription guidance. | 2026-05-11 |
+| 2.1.3   | Contract-drift corrections: `NameRegistry` initial capacity is 50,000 (expandable, not 200,000); undername regex anchor fix; example host moved off arweave.net. | 2026-06-09 |
 
 ## Abstract
 
@@ -38,7 +39,7 @@ The resolver must adhere to the following protocols to correctly identify, resol
   - Must not serve undernames that exceed the maximum DNS label limit. The maximum length of each label is 63 characters, and a full domain name can have a maximum of 253 characters.
   - The maximum undername length is 61 characters. Undernames must start with an alphanumeric character and may contain alphanumeric characters, hyphens, and underscores.
 - **Root Record**: The record with undername `"@"` is the root of the ArNS Name. All undernames for a given name must be sorted by priority, with the root `@` at priority 0.
-- **Regex Compliance**: Must not serve undernames that do not match the ArNS standard pattern: `^@$` or `^[a-zA-Z0-9]+[a-zA-Z0-9_-]*$`.
+- **Regex Compliance**: Must not serve undernames that do not match the ArNS standard pattern: `^@$` or `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`.
 - **Caching**:
   - Must cache each record for the time-to-live (TTL) stored in the record's `ttl_seconds` field.
   - The on-chain minimum TTL is 60 seconds. The resolver SHOULD enforce a minimum cache TTL of 900 seconds (15 minutes) to reduce RPC load and improve performance.
@@ -157,7 +158,7 @@ This allows clients to discover the content address and protocol even when the s
 
 #### Subdomain Routing and Name/CID Disambiguation
 
-AR.IO gateways conventionally serve ArNS names at the apex subdomain: `<arns-name>.<gateway-host>` (e.g., `ardrive.arweave.net`). When a gateway also serves IPFS content, the resolver MUST avoid ambiguity between ArNS-name lookups and CID lookups.
+AR.IO gateways conventionally serve ArNS names at the apex subdomain: `<arns-name>.<gateway-host>` (e.g., `ardrive.ar.io`). When a gateway also serves IPFS content, the resolver MUST avoid ambiguity between ArNS-name lookups and CID lookups.
 
 ##### Why registry-level CID prohibition isn't needed
 
@@ -211,7 +212,7 @@ Solana RPC queries are significantly faster than the prior AO Compute Unit queri
 - **Direct account reads**: `ArnsRecord` and `AntRecord` PDAs are deterministically derivable and readable in a single RPC call.
 - **Batched reads**: Multiple records can be fetched in a single `getMultipleAccounts` RPC call.
 - **WebSocket subscriptions**: The resolver can subscribe to account changes for real-time cache invalidation, eliminating the need for frequent full-registry polling.
-- **Zero-copy registries**: The `NameRegistry` account (200,000 slots) enables full enumeration of all active names in a single read, useful for bootstrap and periodic reconciliation.
+- **Zero-copy registries**: The `NameRegistry` account (50,000 slots at initial deploy, expandable) enables full enumeration of all active names in a single read, useful for bootstrap and periodic reconciliation.
 - **Event log subscriptions**: All state-changing instructions on the `ario-arns`, `ario-ant`, and `ario-core` programs emit Anchor `#[event]` records (see [ARNS-OVERVIEW §Events](arns-overview.md#events)). Resolvers and indexers SHOULD subscribe via `logsSubscribe` rather than diffing account state; the canonical event ABI is published alongside each program's IDL.
 
 #### Refresh Cadence

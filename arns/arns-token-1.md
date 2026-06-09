@@ -15,6 +15,7 @@
 | 1.3.0   | Added record ownership and metadata fields for undernames. | 2025-08-01 |
 | 2.0.0   | Rewritten for Solana: ANTs are Metaplex Core NFTs with on-chain PDA state. Removed Balances, Denomination, TotalSupply, Mint, Burn, Info handler, and AO messaging. Added lazy controller reconciliation, explicit reconcile instruction, and schema-versioned migration. | 2026-04-20 |
 | 2.0.1   | Audit corrections: description max 256, keywords max 8, `AntRecordMetadata` PDA documented as a separate account. | 2026-05-11 |
+| 2.0.2   | Contract-drift corrections: keywords max 3, controllers max 4, description max 128; `version` fields are a 3-byte `SchemaVersion`; `AntControllers` carries `version`. | 2026-06-09 |
 
 ## Abstract
 
@@ -49,17 +50,17 @@ The **ARNS-TOKEN-1** Specification includes the following requirements:
   - Defaults to the AR.IO logo (`"AnYvLJTWcG9lr2Ll5MwYWZR2o5uTE39WbpYB0zCxwKM"`) if not specified at initialization.
 - Must have a `description` field that is a brief description of this ANT and its purpose or use.
   - Must be a string, e.g., `"ArDrive is a permaweb app that lets you upload, download and share your files easily."`.
-  - Must not exceed 256 characters.
+  - Must not exceed 128 characters.
 - Must have a `keywords` field used to further describe this ANT.
   - Must be an array of strings.
-  - Must not contain more than 8 keywords.
+  - Must not contain more than 3 keywords.
   - Each keyword must not exceed 32 characters.
   - Each keyword must consist of alphanumeric characters, dashes (`-`), underscores (`_`), `@`, or `#`.
   - Each keyword must not include spaces.
   - Each keyword must be unique within the array.
 - Must have a `last_known_owner` field that tracks the most recently observed NFT holder address.
   - Used for lazy controller reconciliation (see Transfer section).
-- Must have a `version` field (unsigned 8-bit integer) indicating the schema version of this ANT's on-chain data.
+- Must have a `version` field (a 3-byte `SchemaVersion`: `major`, `minor`, `patch` `u8`s) indicating the schema version of this ANT's on-chain data.
   - Used for per-ANT schema migrations via the `migrate_ant` instruction.
 
 **Ownership:**
@@ -128,11 +129,11 @@ PDA seeds: `["ant_config", <mint>]`
 | `name`             | String         | ANT display name (max 61 characters).                      |
 | `ticker`           | String         | Ticker symbol (max 16 characters), e.g., `"ANT-ARDRIVE"`. |
 | `logo`             | String         | Arweave transaction ID (43 base64url characters).          |
-| `description`      | String         | Brief description (max 256 characters).                    |
-| `keywords`         | Vec\<String\>  | Up to 8 keywords, each max 32 characters.                  |
+| `description`      | String         | Brief description (max 128 characters).                    |
+| `keywords`         | Vec\<String\>  | Up to 3 keywords, each max 32 characters.                  |
 | `last_known_owner` | PublicKey      | Last observed NFT holder, for lazy reconciliation.         |
 | `bump`             | u8             | PDA bump seed.                                             |
-| `version`          | u8             | Schema version for per-ANT data migrations.                |
+| `version`          | SchemaVersion | Schema version for per-ANT data migrations.                |
 
 #### AntControllers
 
@@ -143,8 +144,9 @@ PDA seeds: `["ant_controllers", <mint>]`
 | Field         | Type             | Description                                                  |
 | ------------- | ---------------- | ------------------------------------------------------------ |
 | `mint`        | PublicKey        | The Metaplex Core asset this controller list belongs to.     |
-| `controllers` | Vec\<PublicKey\> | Controller addresses (max 10).                               |
+| `controllers` | Vec\<PublicKey\> | Controller addresses (max 4).                               |
 | `bump`        | u8               | PDA bump seed.                                               |
+| `version`     | SchemaVersion    | Schema version for migrations (3-byte: major/minor/patch).  |
 
 #### AntRecord
 
@@ -163,7 +165,7 @@ PDA seeds: `["ant_record", <mint>, <hash(undername.lowercase())>]`
 | `owner`                | Option\<PublicKey\>     | Optional record-level owner (delegated control).                     |
 | `last_reconciled_owner`| PublicKey               | ANT owner at last record modification; stale records are cleared.    |
 | `bump`                 | u8                      | PDA bump seed.                                                       |
-| `version`              | u8                      | Schema version for per-record data migrations.                       |
+| `version`              | SchemaVersion | Schema version for per-record data migrations.                       |
 
 #### AntRecordMetadata
 
@@ -176,10 +178,10 @@ PDA seeds: `["ant_record_meta", <mint>, <hash(undername.lowercase())>]`
 | `mint`               | PublicKey               | The Metaplex Core asset this metadata belongs to.                 |
 | `display_name`       | Option\<String\>        | Optional display name (max 61 characters).                        |
 | `record_logo`        | Option\<String\>        | Optional logo (Arweave TX ID, 43 characters).                     |
-| `record_description` | Option\<String\>        | Optional description (max 256 characters).                        |
+| `record_description` | Option\<String\>        | Optional description (max 128 characters).                        |
 | `record_keywords`    | Option\<Vec\<String\>\> | Optional keywords (same validation rules as ANT-level keywords).  |
 | `bump`               | u8                      | PDA bump seed.                                                    |
-| `version`            | u8                      | Schema version for per-record-metadata migrations.                |
+| `version`            | SchemaVersion | Schema version for per-record-metadata migrations.                |
 
 ### Instructions
 
@@ -235,8 +237,8 @@ Executable only by the current NFT holder.
 | `target`           | String         | Yes      | Content target for the `@` record (Arweave TX ID, IPFS CID, etc., max 128 chars). |
 | `target_protocol`  | Option\<u8\>  | No       | Storage protocol (`0` = Arweave, `1` = IPFS). Defaults to `0` (Arweave). |
 | `logo`           | String         | No       | Arweave TX ID for logo. Empty string uses default logo.  |
-| `description`    | String         | No       | Description (max 256 characters). Can be empty.          |
-| `keywords`       | Vec\<String\>  | No       | Keywords (max 8, each max 32 chars). Can be empty.       |
+| `description`    | String         | No       | Description (max 128 characters). Can be empty.          |
+| `keywords`       | Vec\<String\>  | No       | Keywords (max 3, each max 32 chars). Can be empty.       |
 
 ##### Rules
 
@@ -257,7 +259,7 @@ Executable only by the current NFT holder.
 | `TickerTooLong`  | Ticker exceeds 16 characters.                                |
 | `InvalidTarget`  | Content target is not valid for the declared protocol.       |
 | `InvalidLogo`    | Logo is not a valid Arweave transaction ID.                  |
-| `DescriptionTooLong` | Description exceeds 256 characters.                      |
+| `DescriptionTooLong` | Description exceeds 128 characters.                      |
 | `InvalidKeyword` | Keywords fail validation (count, length, format, uniqueness).|
 
 #### set_name
@@ -324,12 +326,12 @@ Executable by the NFT holder or an authorized controller.
 
 | Name          | Type   | Description                                        |
 | ------------- | ------ | -------------------------------------------------- |
-| `description` | String | The new description for the ANT (max 256 chars).   |
+| `description` | String | The new description for the ANT (max 128 chars).   |
 
 ##### Rules
 
 - Caller must be the NFT holder or an authorized controller.
-- Description must not exceed 256 characters. An empty string is permitted (clears the description).
+- Description must not exceed 128 characters. An empty string is permitted (clears the description).
 - Lazy reconciliation is performed before the permission check.
 
 ##### Errors
@@ -337,7 +339,7 @@ Executable by the NFT holder or an authorized controller.
 | Error Code          | Condition                                          |
 | ------------------- | -------------------------------------------------- |
 | `Unauthorized`      | Caller is not the NFT holder or a controller.      |
-| `DescriptionTooLong`| Description exceeds 256 characters.                |
+| `DescriptionTooLong`| Description exceeds 128 characters.                |
 
 #### set_keywords
 
@@ -354,7 +356,7 @@ Executable by the NFT holder or an authorized controller.
 ##### Rules
 
 - Caller must be the NFT holder or an authorized controller.
-- Must not contain more than 8 keywords.
+- Must not contain more than 3 keywords.
 - Each keyword must not exceed 32 characters.
 - Each keyword must consist of alphanumeric characters, dashes (`-`), underscores (`_`), `@`, or `#`.
 - Each keyword must not include spaces.

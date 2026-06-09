@@ -15,6 +15,7 @@
 | 2.0.0   | Rebrand to AR.IO Name System, Solana migration, multi-protocol resolution. | 2026-04-20 |
 | 2.1.0   | Audit corrections: `NameRegistry` slot count, registry-side scope statement, pluggable ANT program note. | 2026-05-11 |
 | 2.2.0   | Added Name Validation, Name Lifecycle, Primary Names concept; Architecture diagram, Program IDs lookup, Account Serialization, Events sections. | 2026-05-11 |
+| 2.2.1   | Contract-drift corrections: `NameRegistry` initial capacity is 50,000 (expandable, not 200,000); event ABI policy is ADR-018; whitepaper link moved off arweave.net; "previously the Arweave Name System" note. | 2026-06-09 |
 
 ## Abstract
 
@@ -34,7 +35,7 @@ By extending the utility of ArNS across different technologies and storage netwo
 
 Arweave Transaction IDs, IPFS Content Identifiers (CIDs), and Solana addresses, characterized by their length and complexity, present usability challenges for everyday applications. They are cumbersome to remember, share, and are often erroneously flagged as spam by filters.
 
-The AR.IO Name System (ArNS) addresses these issues by introducing a decentralized, censorship-resistant naming system built on the Solana blockchain. ArNS allows for the assignment of human-readable names to content stored on decentralized storage networks, starting with Arweave and extending to IPFS and future protocols. Names can point to dApps, web pages, files, digital identities, or any content addressable by a supported storage protocol.
+The AR.IO Name System (ArNS — previously the Arweave Name System; the acronym is retained) addresses these issues by introducing a decentralized, censorship-resistant naming system built on the Solana blockchain. ArNS allows for the assignment of human-readable names to content stored on decentralized storage networks, starting with Arweave and extending to IPFS and future protocols. Names can point to dApps, web pages, files, digital identities, or any content addressable by a supported storage protocol.
 
 Using ARIO tokens (SPL tokens on Solana) for transactions and compatible with AR.IO gateway domains, ArNS simplifies access to permaweb content, making it more navigable and user-friendly. It serves as a practical tool for enhancing user interactions on the network by replacing opaque identifiers with memorable names, thereby streamlining access and communication across the decentralized web.
 
@@ -57,7 +58,7 @@ The ArNS system functions similarly to traditional DNS services, where users can
 
 ### AR.IO Name System Registry
 
-The ArNS Registry is a list of all registered names and their associated AR.IO Name Token mint addresses. The registry is managed by the `ario-arns` Solana program and supports on-chain enumeration via the `NameRegistry` zero-copy account (200,000 name slots). There are two different types of name registrations that can be utilized based on the needs of the user:
+The ArNS Registry is a list of all registered names and their associated AR.IO Name Token mint addresses. The registry is managed by the `ario-arns` Solana program and supports on-chain enumeration via the `NameRegistry` zero-copy account (50,000 name slots at initial deploy; expandable post-deploy via `admin_expand_name_registry`). There are two different types of name registrations that can be utilized based on the needs of the user:
 
 - **Lease**: A name may be leased on a yearly basis. A leased name can have its lease extended or renewed, but only up to a maximum active lease of 5 years at any time.
 - **Permanent (Permabuy)**: A name may be purchased for an indefinite duration.
@@ -172,7 +173,7 @@ The core Solana programs that comprise the AR.IO network on-chain infrastructure
 ```mermaid
 flowchart LR
     subgraph ario-arns
-        NR[NameRegistry<br/>zero-copy, 200k slots]
+        NR[NameRegistry<br/>zero-copy, 50k slots (initial)]
         AR[ArnsRecord<br/>per-name PDA]
         RV[ReturnedName / ReservedName<br/>lifecycle PDAs]
     end
@@ -230,7 +231,7 @@ Every state-changing instruction on `ario-core`, `ario-gar`, `ario-arns`, and `a
 - Wire format: `Program data: <base64>` log line; decoded blob = `[discriminator(8) || borsh_payload]`.
 - Subscription: standard Solana `logsSubscribe` against the relevant program ID, or one-shot decoding of a confirmed transaction's `logMessages`.
 - Canonical decoder: the AR.IO SDK exposes `parseTransactionEvents(rpc, sig)` and `parseEventsFromLogs(logs)` (`@ar.io/sdk/solana`).
-- The full event surface (74+ events at time of writing) and per-event payload schemas are published with each program's IDL and in the AR.IO repo's `docs/EVENTS.md`. These specifications do not enumerate individual events because the event set evolves additively post-mainnet under the ABI policy of ADR-017.
+- The full event surface (74+ events at time of writing) and per-event payload schemas are published with each program's IDL and in the AR.IO repo's `docs/EVENTS.md`. These specifications do not enumerate individual events because the event set evolves additively post-mainnet under the ABI policy of ADR-018.
 
 ### Implementations
 
@@ -244,7 +245,7 @@ The following implementations serve as references for building ArNS-compatible r
 
 ## References
 
-- AR.IO White Paper https://whitepaper_ar-io.arweave.net/
+- AR.IO White Paper https://html_whitepaper.ar.io/
 - Metaplex Core NFT Standard https://developers.metaplex.com/core
 - Solana Program Library (SPL) Token https://spl.solana.com/token
 - AR.IO SDK https://github.com/ar-io/ar-io-sdk

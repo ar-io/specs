@@ -14,6 +14,7 @@
 | 2.1.0   | Pluggable ANT program: record PDAs are derived against the program named in the asset's Metaplex Core Attributes plugin (`ANT Program` key). Canonical fallback when absent. | 2026-05-03 |
 | 2.1.1   | Audit corrections: keyword/description limits (8 / 256), AntRecordMetadata PDA split, sort/index is read-side, async `ANT.init`. | 2026-05-11 |
 | 2.1.2   | Pinned `ANT Program` plugin key/value encoding; Get State naming note. | 2026-05-11 |
+| 2.1.3   | Contract-drift corrections: keywords max 3, description max 128; non-root `priority` accepts any non-negative value (matches on-chain). | 2026-06-09 |
 
 ## Abstract
 
@@ -70,7 +71,7 @@ The **ARNS-CORE-1** specification includes the following requirements for valid,
 - The `ttlSeconds` value MUST be between 60 and 86400 seconds (inclusive). Resolvers SHOULD cache for at least 900 seconds regardless of the declared TTL.
 - Each record MAY include a `priority` value, which determines the sort order of undernames served by gateways.
 - The `priority` value for the root record (`@`) MUST be 0.
-- The `priority` value for non-root records MUST be an integer greater than 0, or omitted (unset). When omitted, the record is sorted lexicographically after all priority-assigned records.
+- The `priority` value for non-root records MUST be a non-negative integer (0 or greater), or omitted (unset). When omitted, the record is sorted lexicographically after all priority-assigned records.
 - The undername `@` denotes the root/base name record (i.e., the ArNS name itself with no subdomain prefix).
 - The record undername plus its ArNS name MUST NOT exceed 63 characters in total length.
 - Non-root undernames MUST match the regular expression `^[a-zA-Z0-9][a-zA-Z0-9_-]*$` (must start with an alphanumeric character; remaining characters may be alphanumeric, hyphens, or underscores).
@@ -143,8 +144,8 @@ A record represents a single undername resolution entry within an ANT. On Solana
 | `owner`       | string or null   | Delegated record owner address. When set, this address can modify the record independently of the ANT owner. |
 | `displayName` | string or null   | Human-readable display name. Max 61 characters. |
 | `logo`        | string or null   | Logo image address (Arweave TX ID, 43 characters). |
-| `description` | string or null   | Free-text description. Max 256 characters. |
-| `keywords`    | array of strings or null | Keyword tags. Max 8 keywords, each max 32 characters. |
+| `description` | string or null   | Free-text description. Max 128 characters. |
+| `keywords`    | array of strings or null | Keyword tags. Max 3 keywords, each max 32 characters. |
 
 #### Record Examples
 
